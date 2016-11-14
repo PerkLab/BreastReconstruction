@@ -285,10 +285,15 @@ class CloseModelLogic(ScriptedLoadableModuleLogic):
   fidList.GetNthFiducialPosition(2,point2)
   point3 = [0,0,0]
   fidList.GetNthFiducialPosition(3,point3)
+  cubeCenter = [0,0,0]
+  fidList.GetNthFiducialPosition(4,cubeCenter)
+
 
   normal = [0,0,0]
   plane.ComputeNormal(point1,point2,point3,normal)
-  
+  normal[0] = normal[0] * -1
+  normal[1] = normal[1] * -1
+  normal[2] = normal[2] * -1
   
   #create extrusion fliter to close model
   extrude = vtk.vtkLinearExtrusionFilter()
@@ -316,6 +321,23 @@ class CloseModelLogic(ScriptedLoadableModuleLogic):
   outPutModel.GetDisplayNode().SetPower(10)
   outPutModel.GetDisplayNode().BackfaceCullingOff()
 
+'''
+  box = vtk.vtkCubeSource()
+  box.SetCenter(cubeCenter)
+  box.SetXLength(100)
+  box.SetYLength(100)
+  box.SetZLength(100)
+  polyTransformToProbe = vtk.vtkTransformPolyDataFilter()
+  polyTransformToProbe.SetInputConnection(box.GetOutputPort())
+
+  BoxModel = modelsLogic.AddModel(polyTransformToProbe.GetOutputPort())
+  BoxModel.SetName("Box Model")
+  BoxModel.GetDisplayNode().SetVisibility(True)
+  BoxModel.GetDisplayNode().SetColor(0.9, 0.7, 0.4)
+  BoxModel.GetDisplayNode().SetOpacity(0.5)
+  BoxModel = slicer.util.getNode("Box Model")
+
+'''
 
 class CloseModelTest(ScriptedLoadableModuleTest):
   """
