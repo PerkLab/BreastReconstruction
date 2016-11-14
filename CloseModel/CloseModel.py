@@ -280,20 +280,20 @@ class CloseModelLogic(ScriptedLoadableModuleLogic):
   #Computing normal of first 3 points
   plane = vtk.vtkTriangle()
   point1 = [0,0,0]
-  fidList.GetNthFiducialPosition(0,point1)
+  fidList.GetNthFiducialPosition(1,point1)
   point2 = [0,0,0]
-  fidList.GetNthFiducialPosition(0,point2)
+  fidList.GetNthFiducialPosition(2,point2)
   point3 = [0,0,0]
-  fidList.GetNthFiducialPosition(0,point3)
+  fidList.GetNthFiducialPosition(3,point3)
 
   normal = [0,0,0]
   plane.ComputeNormal(point1,point2,point3,normal)
   
-
+  
   #create extrusion fliter to close model
   extrude = vtk.vtkLinearExtrusionFilter()
   extrude.SetInputData(model)
-  extrude.SetScaleFactor(100)
+  extrude.SetScaleFactor(250)
   extrude.SetExtrusionTypeToNormalExtrusion()
   extrude.SetVector(normal)
   extrude.CappingOn()
