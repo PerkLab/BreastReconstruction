@@ -52,6 +52,7 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     # Layout within the dummy collapsible button
     parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
 
+    '''
     #
     # input volume selector
     #
@@ -101,6 +102,34 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.enableScreenshotsFlagCheckBox.setToolTip("If checked, take screen shots for tutorials. Use Save Data to write them to disk.")
     parametersFormLayout.addRow("Enable Screenshots", self.enableScreenshotsFlagCheckBox)
 
+    '''
+    self.inputModelSelector = slicer.qMRMLNodeComboBox()
+    self.inputModelSelector.nodeTypes = [ "vtkMRMLModelNode" ]
+    self.inputModelSelector.selectNodeUponCreation = True
+    self.inputModelSelector.addEnabled = False
+    self.inputModelSelector.removeEnabled = False
+    self.inputModelSelector.noneEnabled = False
+    self.inputModelSelector.showHidden = False
+    self.inputModelSelector.showChildNodeTypes = False
+    self.inputModelSelector.setMRMLScene( slicer.mrmlScene )
+    self.inputModelSelector.setToolTip( "Pick the input to the algorithm." )
+    parametersFormLayout.addRow("Input Model: ", self.inputModelSelector)
+
+
+    self.inputFiducialSelector = slicer.qSlicerSimpleMarkupsWidget()
+   # self.inputFiducialSelector.nodeTypes = [ "vtkMRMLMarkupsFiducialNode" ]
+    '''
+    self.inputFiducialSelector.selectNodeUponCreation = True
+    self.inputFiducialSelector.addEnabled = False
+    self.inputFiducialSelector.removeEnabled = False
+    self.inputFiducialSelector.noneEnabled = False
+    self.inputFiducialSelector.showHidden = False
+    self.inputFiducialSelector.showChildNodeTypes = False
+    '''
+    self.inputFiducialSelector.tableWidget().hide()
+    self.inputFiducialSelector.setMRMLScene(slicer.mrmlScene)
+    self.inputFiducialSelector.setToolTip( "Pick the fiducials to define the region of interest." )
+    parametersFormLayout.addRow("Input fiducials: ", self.inputFiducialSelector)
     #
     # Apply Button
     #
@@ -111,8 +140,8 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
 
     # connections
     self.applyButton.connect('clicked(bool)', self.onApplyButton)
-    self.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
-    self.outputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    self.inputModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    self.inputFiducialSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -124,13 +153,14 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     pass
 
   def onSelect(self):
-    self.applyButton.enabled = self.inputSelector.currentNode() and self.outputSelector.currentNode()
+    self.applyButton.enabled = self.inputModelSelector.currentNode() and self.inputFiducialSelector.currentNode()
 
   def onApplyButton(self):
     logic = BreastReconstructionLogic()
-    enableScreenshotsFlag = self.enableScreenshotsFlagCheckBox.checked
-    imageThreshold = self.imageThresholdSliderWidget.value
-    logic.run(self.inputSelector.currentNode(), self.outputSelector.currentNode(), imageThreshold, enableScreenshotsFlag)
+   # enableScreenshotsFlag = self.enableScreenshotsFlagCheckBox.checked
+    #imageThreshold = self.imageThresholdSliderWidget.value
+    logic.closeModel(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode())
+    #logic.run(self.inputSelector.currentNode(), self.outputSelector.currentNode(), imageThreshold, enableScreenshotsFlag)
 
 #
 # BreastReconstructionLogic
@@ -145,7 +175,109 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
   Uses ScriptedLoadableModuleLogic base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
+  def closeModel(self, modelNode, fidList):
+    '''
+    in this code need to create a rectangle.
+    find the points on the edge of the model
+    connect edge points to model
+    return new model that is now closed
+    
+    pointIdList = vtk.vtkIdList()
+    edge = vtk.vtkCell()
+   
+    for i in range(0, modelNode.etNumberOfEdges()):
+      {
+        edge.InsertNextCell(modelNode.GetEdge(i))
+        pointIdList.InsertNextId(edge.GetPointIds())
+      }
 
+    cleaner = vtk.vtkCleanPolyData()
+    cleaner.SetInput(modelNode)
+    cleaner.Update()
+
+    triangleFilter = vtk.vtkTriangleFilter()
+    triangleFilter.SetInput(cleaner.GetOutput())
+    triangleFilter.Update()
+
+    massProps = vtk.vtkMassProperties()
+    massProps.SetInput(triangleFilter.GetOutput())
+    massProps.Update()
+
+    modelNode.SurfaceArea = massProps.GetSurfaceArea()
+    modelNode.Volume = massProps.GetVolume()
+    modelNode.ShapeIndex = massProps.GetNormalizedShapeIndex()  
+    '''
+
+    #create vtkpolydata from input model
+    model = modelNode.GetPolyData()   
+
+    normals = vtk.vtkPolyDataNormals()
+    normals.SetInputData(model)
+    normals.ComputePointNormalsOn()
+    normals.ComputeCellNormalsOff()
+    normals.Update()
+
+    #Computing normal of first 3 points
+    plane = vtk.vtkTriangle()
+    point1 = [0,0,0]
+    fidList.GetNthFiducialPosition(1,point1)
+    point2 = [0,0,0]
+    fidList.GetNthFiducialPosition(2,point2)
+    point3 = [0,0,0]
+    fidList.GetNthFiducialPosition(3,point3)
+    cubeCenter = [0,0,0]
+    fidList.GetNthFiducialPosition(4,cubeCenter)
+
+
+    normal = [0,0,0]
+    plane.ComputeNormal(point1,point2,point3,normal)
+    normal[0] = normal[0] * -1
+    normal[1] = normal[1] * -1
+    normal[2] = normal[2] * -1
+    
+    #create extrusion fliter to close model
+    extrude = vtk.vtkLinearExtrusionFilter()
+    extrude.SetInputData(model)
+    extrude.SetScaleFactor(250)
+    extrude.SetExtrusionTypeToNormalExtrusion()
+    extrude.SetVector(normal)
+    extrude.CappingOn()
+
+    #create new model using excrusion filter
+    newmodel = vtk.vtkPolyData()
+    newmodel = extrude.GetOutputPort()
+
+   
+    #adding the new model to the scene
+    modelsLogic = slicer.modules.models.logic()
+    outPutModel = modelsLogic.AddModel(newmodel)
+    outPutModel.SetName("Closed Model")
+    outPutModel.GetDisplayNode().SetVisibility(True)
+    outPutModel.GetDisplayNode().SetColor(0.9, 0.3, 0.9)
+    outPutModel.GetDisplayNode().SetOpacity(1.0)  # can play with these settings
+    outPutModel.GetDisplayNode().SetAmbient(0.1)
+    outPutModel.GetDisplayNode().SetDiffuse(0.9)
+    outPutModel.GetDisplayNode().SetSpecular(0.1)
+    outPutModel.GetDisplayNode().SetPower(10)
+    outPutModel.GetDisplayNode().BackfaceCullingOff()
+
+  '''
+    box = vtk.vtkCubeSource()
+    box.SetCenter(cubeCenter)
+    box.SetXLength(100)
+    box.SetYLength(100)
+    box.SetZLength(100)
+    polyTransformToProbe = vtk.vtkTransformPolyDataFilter()
+    polyTransformToProbe.SetInputConnection(box.GetOutputPort())
+
+    BoxModel = modelsLogic.AddModel(polyTransformToProbe.GetOutputPort())
+    BoxModel.SetName("Box Model")
+    BoxModel.GetDisplayNode().SetVisibility(True)
+    BoxModel.GetDisplayNode().SetColor(0.9, 0.7, 0.4)
+    BoxModel.GetDisplayNode().SetOpacity(0.5)
+    BoxModel = slicer.util.getNode("Box Model")
+
+  '''
   def hasImageData(self,volumeNode):
     """This is an example logic method that
     returns true if the passed in volume
