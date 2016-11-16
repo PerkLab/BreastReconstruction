@@ -52,48 +52,9 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     # Layout within the dummy collapsible button
     parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
 
-    '''
-    #
-    # input volume selector
-    #
-    self.inputSelector = slicer.qMRMLNodeComboBox()
-    self.inputSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-    self.inputSelector.selectNodeUponCreation = True
-    self.inputSelector.addEnabled = False
-    self.inputSelector.removeEnabled = False
-    self.inputSelector.noneEnabled = False
-    self.inputSelector.showHidden = False
-    self.inputSelector.showChildNodeTypes = False
-    self.inputSelector.setMRMLScene( slicer.mrmlScene )
-    self.inputSelector.setToolTip( "Pick the input to the algorithm." )
-    parametersFormLayout.addRow("Input Volume: ", self.inputSelector)
-
-    #
-    # output volume selector
-    #
-    self.outputSelector = slicer.qMRMLNodeComboBox()
-    self.outputSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-    self.outputSelector.selectNodeUponCreation = True
-    self.outputSelector.addEnabled = True
-    self.outputSelector.removeEnabled = True
-    self.outputSelector.noneEnabled = True
-    self.outputSelector.showHidden = False
-    self.outputSelector.showChildNodeTypes = False
-    self.outputSelector.setMRMLScene( slicer.mrmlScene )
-    self.outputSelector.setToolTip( "Pick the output to the algorithm." )
-    parametersFormLayout.addRow("Output Volume: ", self.outputSelector)
-
-    #
-    # threshold value
-    #
-    self.imageThresholdSliderWidget = ctk.ctkSliderWidget()
-    self.imageThresholdSliderWidget.singleStep = 0.1
-    self.imageThresholdSliderWidget.minimum = -100
-    self.imageThresholdSliderWidget.maximum = 100
-    self.imageThresholdSliderWidget.value = 0.5
-    self.imageThresholdSliderWidget.setToolTip("Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.")
-    parametersFormLayout.addRow("Image threshold", self.imageThresholdSliderWidget)
-
+    
+   
+    
     #
     # check box to trigger taking screen shots for later use in tutorials
     #
@@ -102,7 +63,9 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.enableScreenshotsFlagCheckBox.setToolTip("If checked, take screen shots for tutorials. Use Save Data to write them to disk.")
     parametersFormLayout.addRow("Enable Screenshots", self.enableScreenshotsFlagCheckBox)
 
-    '''
+    
+    #input model slector
+
     self.inputModelSelector = slicer.qMRMLNodeComboBox()
     self.inputModelSelector.nodeTypes = [ "vtkMRMLModelNode" ]
     self.inputModelSelector.selectNodeUponCreation = True
@@ -115,21 +78,28 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.inputModelSelector.setToolTip( "Pick the input to the algorithm." )
     parametersFormLayout.addRow("Input Model: ", self.inputModelSelector)
 
+    #input Fiducal slector 
 
     self.inputFiducialSelector = slicer.qSlicerSimpleMarkupsWidget()
-   # self.inputFiducialSelector.nodeTypes = [ "vtkMRMLMarkupsFiducialNode" ]
-    '''
-    self.inputFiducialSelector.selectNodeUponCreation = True
-    self.inputFiducialSelector.addEnabled = False
-    self.inputFiducialSelector.removeEnabled = False
-    self.inputFiducialSelector.noneEnabled = False
-    self.inputFiducialSelector.showHidden = False
-    self.inputFiducialSelector.showChildNodeTypes = False
-    '''
     self.inputFiducialSelector.tableWidget().hide()
     self.inputFiducialSelector.setMRMLScene(slicer.mrmlScene)
     self.inputFiducialSelector.setToolTip( "Pick the fiducials to define the region of interest." )
     parametersFormLayout.addRow("Input fiducials: ", self.inputFiducialSelector)
+
+    #output Model selector
+    
+    self.outputSelector = slicer.qMRMLNodeComboBox()
+    self.outputSelector.nodeTypes = ["vtkMRMLModelNode"]
+    self.outputSelector.selectNodeUponCreation = True
+    self.outputSelector.addEnabled = True
+    self.outputSelector.removeEnabled = True
+    self.outputSelector.noneEnabled = True
+    self.outputSelector.showHidden = False
+    self.outputSelector.showChildNodeTypes = False
+    self.outputSelector.setMRMLScene( slicer.mrmlScene )
+    self.outputSelector.setToolTip( "Pick the output to the algorithm." )
+    parametersFormLayout.addRow("Output Model: ", self.outputSelector)
+
     #
     # Apply Button
     #
@@ -153,14 +123,12 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     pass
 
   def onSelect(self):
-    self.applyButton.enabled = self.inputModelSelector.currentNode() and self.inputFiducialSelector.currentNode()
+    self.applyButton.enabled = self.inputModelSelector.currentNode()
 
   def onApplyButton(self):
     logic = BreastReconstructionLogic()
-   # enableScreenshotsFlag = self.enableScreenshotsFlagCheckBox.checked
-    #imageThreshold = self.imageThresholdSliderWidget.value
-    logic.closeModel(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode())
-    #logic.run(self.inputSelector.currentNode(), self.outputSelector.currentNode(), imageThreshold, enableScreenshotsFlag)
+    enableScreenshotsFlag = self.enableScreenshotsFlagCheckBox.checked
+    logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), self.outputSelector.currentNode(), enableScreenshotsFlag)
 
 #
 # BreastReconstructionLogic
@@ -181,33 +149,8 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     find the points on the edge of the model
     connect edge points to model
     return new model that is now closed
-    
-    pointIdList = vtk.vtkIdList()
-    edge = vtk.vtkCell()
-   
-    for i in range(0, modelNode.etNumberOfEdges()):
-      {
-        edge.InsertNextCell(modelNode.GetEdge(i))
-        pointIdList.InsertNextId(edge.GetPointIds())
-      }
-
-    cleaner = vtk.vtkCleanPolyData()
-    cleaner.SetInput(modelNode)
-    cleaner.Update()
-
-    triangleFilter = vtk.vtkTriangleFilter()
-    triangleFilter.SetInput(cleaner.GetOutput())
-    triangleFilter.Update()
-
-    massProps = vtk.vtkMassProperties()
-    massProps.SetInput(triangleFilter.GetOutput())
-    massProps.Update()
-
-    modelNode.SurfaceArea = massProps.GetSurfaceArea()
-    modelNode.Volume = massProps.GetVolume()
-    modelNode.ShapeIndex = massProps.GetNormalizedShapeIndex()  
     '''
-
+   
     #create vtkpolydata from input model
     model = modelNode.GetPolyData()   
 
@@ -251,6 +194,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     #adding the new model to the scene
     modelsLogic = slicer.modules.models.logic()
     outPutModel = modelsLogic.AddModel(newmodel)
+
     outPutModel.SetName("Closed Model")
     outPutModel.GetDisplayNode().SetVisibility(True)
     outPutModel.GetDisplayNode().SetColor(0.9, 0.3, 0.9)
@@ -261,49 +205,32 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     outPutModel.GetDisplayNode().SetPower(10)
     outPutModel.GetDisplayNode().BackfaceCullingOff()
 
-  '''
-    box = vtk.vtkCubeSource()
-    box.SetCenter(cubeCenter)
-    box.SetXLength(100)
-    box.SetYLength(100)
-    box.SetZLength(100)
-    polyTransformToProbe = vtk.vtkTransformPolyDataFilter()
-    polyTransformToProbe.SetInputConnection(box.GetOutputPort())
+    #Create volume for scene 
+    imageSize=[512, 512, 512]
+    imageSpacing=[1.0, 1.0, 1.0]
+    voxelType=vtk.VTK_UNSIGNED_CHAR
+    # Create an empty image volume
+    imageData=vtk.vtkImageData()
+    imageData.SetDimensions(imageSize)
+    imageData.AllocateScalars(voxelType, 1)
+    thresholder=vtk.vtkImageThreshold()
+    thresholder.SetInputData(imageData)
+    thresholder.SetInValue(0)
+    thresholder.SetOutValue(0)
+    # Create volume node
+    volumeNode=slicer.vtkMRMLScalarVolumeNode()
+    volumeNode.SetSpacing(imageSpacing)
+    volumeNode.SetImageDataConnection(thresholder.GetOutputPort())
+    # Add volume to scene
+    slicer.mrmlScene.AddNode(volumeNode)
+    displayNode=slicer.vtkMRMLScalarVolumeDisplayNode()
+    slicer.mrmlScene.AddNode(displayNode)
+    colorNode = slicer.util.getNode('Grey')
+    displayNode.SetAndObserveColorNodeID(colorNode.GetID())
+    volumeNode.SetAndObserveDisplayNodeID(displayNode.GetID())
+    volumeNode.CreateDefaultStorageNode()
+    volumeNode.SetName("Volume Node")
 
-    BoxModel = modelsLogic.AddModel(polyTransformToProbe.GetOutputPort())
-    BoxModel.SetName("Box Model")
-    BoxModel.GetDisplayNode().SetVisibility(True)
-    BoxModel.GetDisplayNode().SetColor(0.9, 0.7, 0.4)
-    BoxModel.GetDisplayNode().SetOpacity(0.5)
-    BoxModel = slicer.util.getNode("Box Model")
-
-  '''
-  def hasImageData(self,volumeNode):
-    """This is an example logic method that
-    returns true if the passed in volume
-    node has valid image data
-    """
-    if not volumeNode:
-      logging.debug('hasImageData failed: no volume node')
-      return False
-    if volumeNode.GetImageData() is None:
-      logging.debug('hasImageData failed: no image data in volume node')
-      return False
-    return True
-
-  def isValidInputOutputData(self, inputVolumeNode, outputVolumeNode):
-    """Validates if the output is not the same as input
-    """
-    if not inputVolumeNode:
-      logging.debug('isValidInputOutputData failed: no input volume node defined')
-      return False
-    if not outputVolumeNode:
-      logging.debug('isValidInputOutputData failed: no output volume node defined')
-      return False
-    if inputVolumeNode.GetID()==outputVolumeNode.GetID():
-      logging.debug('isValidInputOutputData failed: input and output volume is the same. Create a new volume for output to avoid this error.')
-      return False
-    return True
 
   def takeScreenshot(self,name,description,type=-1):
     # show the message even if not taking a screen shot
@@ -342,21 +269,12 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     annotationLogic = slicer.modules.annotations.logic()
     annotationLogic.CreateSnapShot(name, description, type, 1, imageData)
 
-  def run(self, inputVolume, outputVolume, imageThreshold, enableScreenshots=0):
+  def run(self, inputModel, fidList, outMode, enableScreenshots=0):
     """
     Run the actual algorithm
     """
 
-    if not self.isValidInputOutputData(inputVolume, outputVolume):
-      slicer.util.errorDisplay('Input volume is the same as output volume. Choose a different output volume.')
-      return False
-
-    logging.info('Processing started')
-
-    # Compute the thresholded output volume using the Threshold Scalar Volume CLI module
-    cliParams = {'InputVolume': inputVolume.GetID(), 'OutputVolume': outputVolume.GetID(), 'ThresholdValue' : imageThreshold, 'ThresholdType' : 'Above'}
-    cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True)
-
+    self.closeModel(inputModel, fidList)
     # Capture screenshot
     if enableScreenshots:
       self.takeScreenshot('BreastReconstructionTest-Start','MyScreenshot',-1)
@@ -397,25 +315,4 @@ class BreastReconstructionTest(ScriptedLoadableModuleTest):
     """
 
     self.delayDisplay("Starting the test")
-    #
-    # first, get some data
-    #
-    import urllib
-    downloads = (
-        ('http://slicer.kitware.com/midas3/download?items=5767', 'FA.nrrd', slicer.util.loadVolume),
-        )
-
-    for url,name,loader in downloads:
-      filePath = slicer.app.temporaryPath + '/' + name
-      if not os.path.exists(filePath) or os.stat(filePath).st_size == 0:
-        logging.info('Requesting download %s from %s...\n' % (name, url))
-        urllib.urlretrieve(url, filePath)
-      if loader:
-        logging.info('Loading %s...' % (name,))
-        loader(filePath)
-    self.delayDisplay('Finished with download and loading')
-
-    volumeNode = slicer.util.getNode(pattern="FA")
-    logic = BreastReconstructionLogic()
-    self.assertIsNotNone( logic.hasImageData(volumeNode) )
     self.delayDisplay('Test passed!')
