@@ -16,12 +16,11 @@ class BreastReconstruction(ScriptedLoadableModule):
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "BreastReconstruction" # TODO make this more human readable by adding spaces
-    self.parent.categories = ["Examples"]
+    self.parent.categories = ["BreastSurgery"]
     self.parent.dependencies = []
     self.parent.contributors = ["John Doe (AnyWare Corp.)"] # replace with "Firstname Lastname (Organization)"
     self.parent.helpText = """
     This is an example of scripted loadable module bundled in an extension.
-    It performs a simple thresholding on the input volume and optionally captures a screenshot.
     """
     self.parent.acknowledgementText = """
     This file was originally developed by Jean-Christophe Fillion-Robin, Kitware Inc.
@@ -51,18 +50,6 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
 
     # Layout within the dummy collapsible button
     parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
-
-    
-   
-    
-    #
-    # check box to trigger taking screen shots for later use in tutorials
-    #
-    self.enableScreenshotsFlagCheckBox = qt.QCheckBox()
-    self.enableScreenshotsFlagCheckBox.checked = 0
-    self.enableScreenshotsFlagCheckBox.setToolTip("If checked, take screen shots for tutorials. Use Save Data to write them to disk.")
-    parametersFormLayout.addRow("Enable Screenshots", self.enableScreenshotsFlagCheckBox)
-
     
     #input model slector
 
@@ -84,7 +71,14 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.inputFiducialSelector.tableWidget().hide()
     self.inputFiducialSelector.setMRMLScene(slicer.mrmlScene)
     self.inputFiducialSelector.setToolTip( "Pick the fiducials to define the region of interest." )
+    self.inputFiducialSelector.setNodeBaseName ("BreastFiducials")
     parametersFormLayout.addRow("Input fiducials: ", self.inputFiducialSelector)
+    # Enable place multiple marukps by default
+    placeWidget = self.inputFiducialSelector.markupsPlaceWidget()
+    placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
+    placeWidget.placeModeEnabled = False
+    placeWidget.placeModeEnabled = True
+    
 
     #output Model selector
     
@@ -127,8 +121,7 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
 
   def onApplyButton(self):
     logic = BreastReconstructionLogic()
-    enableScreenshotsFlag = self.enableScreenshotsFlagCheckBox.checked
-    logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), self.outputSelector.currentNode(), enableScreenshotsFlag)
+    logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), self.outputSelector.currentNode())
 
 #
 # BreastReconstructionLogic
@@ -152,37 +145,38 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     '''
    
     #create vtkpolydata from input model
-    model = modelNode.GetPolyData()   
-
-    normals = vtk.vtkPolyDataNormals()
-    normals.SetInputData(model)
-    normals.ComputePointNormalsOn()
-    normals.ComputeCellNormalsOff()
-    normals.Update()
-
+    #model = modelNode.GetPolyData()   
+    
+    
+    # VTK connectivity filter
+    surface = modelNode.GetPolyDataConnection()
+    connectivityFilter = vtk.vtkPolyDataConnectivityFilter()
+    connectivityFilter.SetExtractionModeToLargestRegion()
+    connectivityFilter.SetInputConnection(surface)
+    surface = connectivityFilter.GetOutputPort()
+    modelNode.SetPolyDataConnection(surface)
+    modelNode.Update()
+    
     #Computing normal of first 3 points
-    plane = vtk.vtkTriangle()
     point1 = [0,0,0]
-    fidList.GetNthFiducialPosition(1,point1)
+    fidList.GetNthFiducialPosition(0,point1)
     point2 = [0,0,0]
-    fidList.GetNthFiducialPosition(2,point2)
+    fidList.GetNthFiducialPosition(1,point2)
     point3 = [0,0,0]
-    fidList.GetNthFiducialPosition(3,point3)
-    cubeCenter = [0,0,0]
-    fidList.GetNthFiducialPosition(4,cubeCenter)
-
-
+    fidList.GetNthFiducialPosition(2,point3)
     normal = [0,0,0]
     plane.ComputeNormal(point1,point2,point3,normal)
-    normal[0] = normal[0] * -1
-    normal[1] = normal[1] * -1
-    normal[2] = normal[2] * -1
+    normal[0] = normal[0] * 1
+    normal[1] = normal[1] * 1
+    normal[2] = normal[2] * 1
     
     #create extrusion fliter to close model
-    extrude = vtk.vtkLinearExtrusionFilter()
+    model = modelNode.GetPolyData() 
+	extrude = vtk.vtkLinearExtrusionFilter()
     extrude.SetInputData(model)
     extrude.SetScaleFactor(250)
-    extrude.SetExtrusionTypeToNormalExtrusion()
+    extrude.SetExtrusionTypeToVectorExtrusion()
+    #extrude.SetExtrusionTypeToNormalExtrusion()
     extrude.SetVector(normal)
     extrude.CappingOn()
 
@@ -232,53 +226,12 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     volumeNode.SetName("Volume Node")
 
 
-  def takeScreenshot(self,name,description,type=-1):
-    # show the message even if not taking a screen shot
-    slicer.util.delayDisplay('Take screenshot: '+description+'.\nResult is available in the Annotations module.', 3000)
-
-    lm = slicer.app.layoutManager()
-    # switch on the type to get the requested window
-    widget = 0
-    if type == slicer.qMRMLScreenShotDialog.FullLayout:
-      # full layout
-      widget = lm.viewport()
-    elif type == slicer.qMRMLScreenShotDialog.ThreeD:
-      # just the 3D window
-      widget = lm.threeDWidget(0).threeDView()
-    elif type == slicer.qMRMLScreenShotDialog.Red:
-      # red slice window
-      widget = lm.sliceWidget("Red")
-    elif type == slicer.qMRMLScreenShotDialog.Yellow:
-      # yellow slice window
-      widget = lm.sliceWidget("Yellow")
-    elif type == slicer.qMRMLScreenShotDialog.Green:
-      # green slice window
-      widget = lm.sliceWidget("Green")
-    else:
-      # default to using the full window
-      widget = slicer.util.mainWindow()
-      # reset the type so that the node is set correctly
-      type = slicer.qMRMLScreenShotDialog.FullLayout
-
-    # grab and convert to vtk image data
-    qpixMap = qt.QPixmap().grabWidget(widget)
-    qimage = qpixMap.toImage()
-    imageData = vtk.vtkImageData()
-    slicer.qMRMLUtils().qImageToVtkImageData(qimage,imageData)
-
-    annotationLogic = slicer.modules.annotations.logic()
-    annotationLogic.CreateSnapShot(name, description, type, 1, imageData)
-
-  def run(self, inputModel, fidList, outMode, enableScreenshots=0):
+  def run(self, inputModel, fidList, outMode):
     """
     Run the actual algorithm
     """
-
     self.closeModel(inputModel, fidList)
-    # Capture screenshot
-    if enableScreenshots:
-      self.takeScreenshot('BreastReconstructionTest-Start','MyScreenshot',-1)
-
+    
     logging.info('Processing completed')
 
     return True
