@@ -149,6 +149,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     
     
     # VTK connectivity filter
+    '''
     surface = modelNode.GetPolyDataConnection()
     connectivityFilter = vtk.vtkPolyDataConnectivityFilter()
     connectivityFilter.SetExtractionModeToLargestRegion()
@@ -156,7 +157,8 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     surface = connectivityFilter.GetOutputPort()
     modelNode.SetPolyDataConnection(surface)
     modelNode.Update()
-    
+    '''
+
     #Computing normal of first 3 points
     point1 = [0,0,0]
     fidList.GetNthFiducialPosition(0,point1)
@@ -165,6 +167,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     point3 = [0,0,0]
     fidList.GetNthFiducialPosition(2,point3)
     normal = [0,0,0]
+    plane = vtk.vtkTriangle()
     plane.ComputeNormal(point1,point2,point3,normal)
     normal[0] = normal[0] * 1
     normal[1] = normal[1] * 1
@@ -172,7 +175,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     
     #create extrusion fliter to close model
     model = modelNode.GetPolyData() 
-	extrude = vtk.vtkLinearExtrusionFilter()
+    extrude = vtk.vtkLinearExtrusionFilter()
     extrude.SetInputData(model)
     extrude.SetScaleFactor(250)
     extrude.SetExtrusionTypeToVectorExtrusion()
