@@ -177,7 +177,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     model = modelNode.GetPolyData() 
     extrude = vtk.vtkLinearExtrusionFilter()
     extrude.SetInputData(model)
-    extrude.SetScaleFactor(250)
+    extrude.SetScaleFactor(100)
     extrude.SetExtrusionTypeToVectorExtrusion()
     #extrude.SetExtrusionTypeToNormalExtrusion()
     extrude.SetVector(normal)
