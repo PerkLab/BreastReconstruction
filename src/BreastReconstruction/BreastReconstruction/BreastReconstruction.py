@@ -201,6 +201,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
                     if averageDistance < bestDistance:
                         bestDistance = averageDistance
                         plane.SetNormal(normalVector)
+    print(normalVector)
 
   def ClosedInputSurface(self, modelNode, fidList):
 
@@ -221,11 +222,11 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     extrude.CappingOn()
     extrude.Update()
 
-    modelsLogic = slicer.modules.models.logic()
-    Model = modelsLogic.AddModel(extrude.GetOutputPort()) 
-    Model.GetDisplayNode().SetVisibility(True)
-    Model.SetName("ClosedBreast")
-    Model.GetDisplayNode().BackfaceCullingOff()
+    # modelsLogic = slicer.modules.models.logic()
+    # Model = modelsLogic.AddModel(extrude.GetOutputPort()) 
+    # Model.GetDisplayNode().SetVisibility(True)
+    # Model.SetName("ClosedBreast")
+    # Model.GetDisplayNode().BackfaceCullingOff()
 
     featureEdges = vtk.vtkFeatureEdges()
     featureEdges.FeatureEdgesOff()
@@ -245,7 +246,9 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
 
   def createCroppedModel(self, modelNode, fidList):
-     #vtkClipPolyData, using defined least-squares plane to crop model 
+     #vtkClipPolyData, using defined least-squares plane to crop model
+    modelsLogic = slicer.modules.models.logic()
+
     plane = vtk.vtkPlane()
     self.LeastSquaresPlane(modelNode, fidList, plane)
     InputModel = modelNode.GetPolyData()
@@ -275,11 +278,11 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
     reversePolyData = reversePlane.GetOutput()
 
-    modelsLogic = slicer.modules.models.logic()
-    PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort()) 
-    PlaneModel.GetDisplayNode().SetVisibility(False)
-    PlaneModel.SetName("PlaneModel")
-    PlaneModel.GetDisplayNode().BackfaceCullingOff()
+    # modelsLogic = slicer.modules.models.logic()
+    # PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort()) 
+    # PlaneModel.GetDisplayNode().SetVisibility(False)
+    # PlaneModel.SetName("PlaneModel")
+    # PlaneModel.GetDisplayNode().BackfaceCullingOff()
 
     ######################################################
     PointsPolyData = vtk.vtkPolyData()
@@ -309,11 +312,11 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     appendFilter.AddInputData(clipperLoop.GetOutput())
     appendFilter.Update()
 
-    modelsLogic = slicer.modules.models.logic()
-    AppendModel = modelsLogic.AddModel(appendFilter.GetOutputPort()) 
-    AppendModel.GetDisplayNode().SetVisibility(True)
-    AppendModel.SetName("AppendModel")
-    AppendModel.GetDisplayNode().BackfaceCullingOff()
+    # modelsLogic = slicer.modules.models.logic()
+    # AppendModel = modelsLogic.AddModel(appendFilter.GetOutputPort()) 
+    # AppendModel.GetDisplayNode().SetVisibility(True)
+    # AppendModel.SetName("AppendModel")
+    # AppendModel.GetDisplayNode().BackfaceCullingOff()
 
     #############################################################
     rotationExtrude = vtk.vtkLinearExtrusionFilter()
@@ -331,12 +334,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     clipperLoop3.SetInsideOut(True)
     clipperLoop3.Update()
 
-   
-    # appendFilter2 = vtk.vtkAppendPolyData()
-    # appendFilter2.AddInputData(clipperLoop.GetOutput())
-    # appendFilter2.AddInputData(clipperLoop3.GetOutput())
-    # appendFilter2.Update()
-     #extract edges from clipperLoop3 to close surface
     boundaryEdges = vtk.vtkFeatureEdges()
     boundaryEdges.SetInputData(clipperLoop3.GetOutput())
     boundaryEdges.BoundaryEdgesOn()
@@ -361,6 +358,19 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     cleanFinal.SetInputConnection(appendFilter2.GetOutputPort())
     cleanFinal.Update()
 
+    massProperties = vtk.vtkMassProperties()
+    massProperties.SetInputConnection(cleanFinal.GetOutputPort())
+    volume = massProperties.GetVolume()
+    volume = volume/ 1000
+    volume = round(volume,2)
+    print('Volume in cc')
+    print(volume)
+    surfaceArea = massProperties.GetSurfaceArea()
+    surfaceArea = surfaceArea / 100
+    surfaceArea = round(surfaceArea, 2)
+    print('Surface Area in cm^2')
+    print(surfaceArea)
+
     ###################################################################
 
 
@@ -369,11 +379,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     finalModel.SetName("CroppedClosedBreast")
     finalModel.GetDisplayNode().BackfaceCullingOff()
 
-
-    finalModel = modelsLogic.AddModel(appendFilter2.GetOutputPort()) 
-    finalModel.GetDisplayNode().SetVisibility(True)
-    finalModel.SetName("CroppedBreast")
-    finalModel.GetDisplayNode().BackfaceCullingOff()
 
     featureEdges = vtk.vtkFeatureEdges()
     featureEdges.FeatureEdgesOff()
