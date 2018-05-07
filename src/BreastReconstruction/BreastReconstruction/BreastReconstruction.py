@@ -81,7 +81,6 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     placeWidget.placeModeEnabled = False
     placeWidget.placeModeEnabled = True
     
-
     #output Model selector
     
     self.outputSelector = slicer.qMRMLNodeComboBox()
@@ -96,18 +95,22 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.outputSelector.setToolTip( "Pick the output to the algorithm." )
     parametersFormLayout.addRow("Output Model: ", self.outputSelector)
 
+    self.LeftBreastButton = qt.QPushButton("Left Breast")
+    self.LeftBreastButton.enabled = False
+    parametersFormLayout.addRow("Left breast computations", self.LeftBreastButton)
     #
     # Apply Button
     #
-    self.applyButton = qt.QPushButton("Apply")
-    self.applyButton.toolTip = "Run the algorithm."
-    self.applyButton.enabled = False
-    parametersFormLayout.addRow(self.applyButton)
+    self.RightBreastButton = qt.QPushButton("Right Breast")
+    self.RightBreastButton.enabled = False
+    parametersFormLayout.addRow("Right breast computations", self.RightBreastButton)
 
     # connections
-    self.applyButton.connect('clicked(bool)', self.onApplyButton)
+    self.RightBreastButton.connect('clicked(bool)', self.onRightBreastButton)
     self.inputModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    self.outputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.inputFiducialSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    self.LeftBreastButton.connect('clicked(bool)', self.onLeftBreastButton )
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -119,29 +122,34 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     pass
 
   def onSelect(self):
-    self.applyButton.enabled = self.inputModelSelector.currentNode()
+    self.RightBreastButton.enabled = self.inputModelSelector.currentNode()
+    self.LeftBreastButton.enabled = self.inputModelSelector.currentNode()
 
-  def onApplyButton(self):
+  def onRightBreastButton(self):
     logic = BreastReconstructionLogic()
 
     if self.inputFiducialSelector.currentNode() == None:
         logging.error('Please enter input fiducials')
+    # elif self.outputSelector.currentNode() == None:
+    #     logging.error('Please enter an output model')
+    elif self.inputModelSelector == None:
+        self.error("Please enter input model")
     else: 
-        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), self.outputSelector.currentNode())
+        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), self.outputSelector.currentNode(), False)
 
-#
-# BreastReconstructionLogic
-#
+  def onLeftBreastButton(self):
+    logic = BreastReconstructionLogic()
+
+    if self.inputFiducialSelector.currentNode() == None:
+        logging.error('Please enter input fiducials')
+    # elif self.outputSelector.currentNode() == None:
+    #     logging.error('Please enter an output model')
+    elif self.inputModelSelector == None:
+        self.error("Please enter input model")
+    else: 
+        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), self.outputSelector.currentNode(), True)
 
 class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
-  """This class should implement all the actual
-  computation done by your module.  The interface
-  should be such that other python code can import
-  this class and make use of the functionality without
-  requiring an instance of the Widget.
-  Uses ScriptedLoadableModuleLogic base class, available at:
-  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
-  """
   def FiducialsToPolyData(self, fiducials, polyData):
     #create polydata from fiducial list 
     points = vtk.vtkPoints()
@@ -179,33 +187,37 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     tempPlane.SetOrigin(center)
 
     plane.SetOrigin(center)
-    #Chose 3 of the 8 points to compute the normal from and compute error
-    #choose plane with least errror 
+    #Chose 3 of the points to compute the normal from and compute error
+    #choose plane with least average distance to the plane (error)
     bestDistance = float('inf')
     for i in range(NumberOfPoints):
         for j in range(1, NumberOfPoints):
             for k in range(2, NumberOfPoints):
+                #to ensure no points immediately beside each other are slected
                 if abs(i - j) > 1 and abs(i- k) > 1 and abs(j-k)> 1 and abs(i - j) < (NumberOfPoints - 1) and abs(i- k) < (NumberOfPoints -1):
                     triangle = vtk.vtkTriangle()
                     pi = PointsPolyData.GetPoint(i)
                     pj = PointsPolyData.GetPoint(j)
                     pk = PointsPolyData.GetPoint(k)
+                    #compute the normal of the 3 selected points 
                     normalVector = [0.0, 0.0, 0.0]
                     triangle.ComputeNormal(pi, pj, pk, normalVector)
                     tempPlane.SetNormal(normalVector)
                     distance = 0
                     for p in range(NumberOfPoints):
+                        #compute the distance from each point to the plane
                         point = PointsPolyData.GetPoint(p)
-                        distance = distance + tempPlane.DistanceToPlane(point)
+                        distance = distance + abs(tempPlane.DistanceToPlane(point))
                     averageDistance = distance/NumberOfPoints
                     if averageDistance < bestDistance:
+                        #select plane if average distance value is lower
                         bestDistance = averageDistance
                         plane.SetNormal(normalVector)
-    print(normalVector)
 
   def ClosedInputSurface(self, modelNode, fidList):
-
     #Create closed surface for clipping
+    #Closed surface is created using the linearExtrusion filter
+    #The sirface is extruded in the direction of the breast normal
     extrude = vtk.vtkLinearExtrusionFilter()
     plane = vtk.vtkPlane()
     self.LeastSquaresPlane(modelNode,fidList, plane)
@@ -222,33 +234,24 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     extrude.CappingOn()
     extrude.Update()
 
+    #Uncomment to addd the closed model to the scene
+
     # modelsLogic = slicer.modules.models.logic()
     # Model = modelsLogic.AddModel(extrude.GetOutputPort()) 
     # Model.GetDisplayNode().SetVisibility(True)
     # Model.SetName("ClosedBreast")
     # Model.GetDisplayNode().BackfaceCullingOff()
 
-    featureEdges = vtk.vtkFeatureEdges()
-    featureEdges.FeatureEdgesOff()
-    featureEdges.BoundaryEdgesOn()
-    featureEdges.NonManifoldEdgesOn()
-    featureEdges.SetInputConnection(extrude.GetOutputPort())
-    featureEdges.Update()
-    numberOfOpenEdges = featureEdges.GetOutput().GetNumberOfCells()
- 
-    if(numberOfOpenEdges > 0):
-        print("Surface is not closed (closed surface)")
-    
+  def createCroppedModel(self, modelNode, fidList, outputModel, LeftBreast):
+     #Check which breast volume is being computed for 
+    if LeftBreast == True:
+        name = "ClosedLeftBreast"
     else:
-        print("surface is closed (closed surface)")
- 
+        name = "ClosedRightBreast"
 
-
-
-  def createCroppedModel(self, modelNode, fidList):
-     #vtkClipPolyData, using defined least-squares plane to crop model
     modelsLogic = slicer.modules.models.logic()
 
+    #Clip the input model with the plane defined by input points
     plane = vtk.vtkPlane()
     self.LeastSquaresPlane(modelNode, fidList, plane)
     InputModel = modelNode.GetPolyData()
@@ -256,9 +259,10 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     clippedInput.SetInputData(InputModel)
     clippedInput.SetClipFunction(plane)
     clippedInput.SetValue(0)
-    clippedInput.SetInsideOut(True)
+    clippedInput.SetInsideOut(LeftBreast)
     clippedInput.Update()
 
+    #create visual respersentation of the plane to add to the scene
     cutterPlane = vtk.vtkCutter()
     cutterPlane.SetCutFunction(plane)
     cutterPlane.SetInputData(clippedInput.GetOutput())
@@ -278,88 +282,59 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
     reversePolyData = reversePlane.GetOutput()
 
-    # modelsLogic = slicer.modules.models.logic()
-    # PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort()) 
-    # PlaneModel.GetDisplayNode().SetVisibility(False)
-    # PlaneModel.SetName("PlaneModel")
-    # PlaneModel.GetDisplayNode().BackfaceCullingOff()
+    modelsLogic = slicer.modules.models.logic()
+    PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort()) 
+    PlaneModel.GetDisplayNode().SetVisibility(False)
+    PlaneModel.SetName("PlaneModel")
+    PlaneModel.GetDisplayNode().BackfaceCullingOff()
 
-    ######################################################
+    #create a loop denfined by the input points
     PointsPolyData = vtk.vtkPolyData()
     self.FiducialsToPolyData(fidList, PointsPolyData)
 
     loop = vtk.vtkImplicitSelectionLoop()
     loop.SetLoop(PointsPolyData.GetPoints())
+    loop.SetNormal(plane.GetNormal())
 
-    #Now clip with loop
-    clipperLoop = vtk.vtkClipPolyData()
-    clipperLoop.SetClipFunction(loop)
-    clipperLoop.SetInputData(reversePolyData)
-    clipperLoop.SetInsideOut(True)
-    clipperLoop.Update()
+    #Clip the clipped input model with the loop
+    clippedInputWithLoop = vtk.vtkClipPolyData()
+    clippedInputWithLoop.SetClipFunction(loop)
+    clippedInputWithLoop.SetInputData(clippedInput.GetOutput())
+    clippedInputWithLoop.SetInsideOut(True)
+    clippedInputWithLoop.Update()
 
-    #clip input with loop
-    clipperLoop2 = vtk.vtkClipPolyData()
-    clipperLoop2.SetClipFunction(loop)
-    clipperLoop2.SetInputData(clippedInput.GetOutput())
-    clipperLoop2.SetInsideOut(True)
-    clipperLoop2.Update()
-
-    ###########################################################
-
-    appendFilter = vtk.vtkAppendPolyData()
-    appendFilter.AddInputData(clipperLoop2.GetOutput())
-    appendFilter.AddInputData(clipperLoop.GetOutput())
-    appendFilter.Update()
-
-    # modelsLogic = slicer.modules.models.logic()
-    # AppendModel = modelsLogic.AddModel(appendFilter.GetOutputPort()) 
-    # AppendModel.GetDisplayNode().SetVisibility(True)
-    # AppendModel.SetName("AppendModel")
-    # AppendModel.GetDisplayNode().BackfaceCullingOff()
-
-    #############################################################
-    rotationExtrude = vtk.vtkLinearExtrusionFilter()
-    rotationExtrude.SetInputData(clipperLoop2.GetOutput())
-    rotationExtrude.SetScaleFactor(100)
-    rotationExtrude.CappingOn()
+    #close the clippedInputWith loop by using the linearExtrusion filter
+    extrudeInputWithLoop = vtk.vtkLinearExtrusionFilter()
+    extrudeInputWithLoop.SetInputData(clippedInputWithLoop.GetOutput())
+    extrudeInputWithLoop.SetScaleFactor(100)
+    extrudeInputWithLoop.CappingOn()
     normVec = plane.GetNormal()
-    rotationExtrude.SetVector(normVec[0], normVec[1], normVec[2])
-    rotationExtrude.Update()
+    if LeftBreast == True:
+        extrudeInputWithLoop.SetVector((normVec[0]), (normVec[1]), (normVec[2]))
+    else:
+        extrudeInputWithLoop.SetVector((normVec[0]*-1), (normVec[1]*-1), (normVec[2]*-1))
+    extrudeInputWithLoop.Update()
 
-    #clip extruded breast with plane
-    clipperLoop3 = vtk.vtkClipPolyData()
-    clipperLoop3.SetClipFunction(plane)
-    clipperLoop3.SetInputData(rotationExtrude.GetOutput())
-    clipperLoop3.SetInsideOut(True)
-    clipperLoop3.Update()
+    #Auto Orient the normals of the ExtrudeInputWithLoop
+    extrudeNormals = vtk.vtkPolyDataNormals()
+    extrudeNormals.SetInputData(extrudeInputWithLoop.GetOutput())
+    extrudeNormals.ComputePointNormalsOn()
+    extrudeNormals.AutoOrientNormalsOn()
+    extrudeNormals.Update()
 
-    boundaryEdges = vtk.vtkFeatureEdges()
-    boundaryEdges.SetInputData(clipperLoop3.GetOutput())
-    boundaryEdges.BoundaryEdgesOn()
-    boundaryEdges.FeatureEdgesOff()
-    boundaryEdges.NonManifoldEdgesOff()
-    boundaryEdges.ManifoldEdgesOff()
+    plane.SetNormal((normVec[0]*-1), (normVec[1]*-1), (normVec[2]*-1))
+    planeCollection = vtk.vtkPlaneCollection()
+    planeCollection.AddItem(plane)
 
-    boundaryStrips = vtk.vtkStripper()
-    boundaryStrips.SetInputConnection(boundaryEdges.GetOutputPort())
-    boundaryStrips.Update()
+    clipClosedBreast = vtk.vtkClipClosedSurface()
+    clipClosedBreast.SetInputConnection(extrudeNormals.GetOutputPort())
+    clipClosedBreast.SetClippingPlanes(planeCollection)
+    clipClosedBreast.TriangulationErrorDisplayOn() 
+    clipClosedBreast.Update()
 
-    boundaryPoly = vtk.vtkPolyData()
-    boundaryPoly.SetPoints(boundaryStrips.GetOutput().GetPoints())
-    boundaryPoly.SetPolys(boundaryStrips.GetOutput().GetLines())
-
-    appendFilter2 = vtk.vtkAppendPolyData()
-    appendFilter2.AddInputData(boundaryPoly)
-    appendFilter2.AddInputData(clipperLoop3.GetOutput())
-    appendFilter2.Update()
-
-    cleanFinal = vtk.vtkCleanPolyData()
-    cleanFinal.SetInputConnection(appendFilter2.GetOutputPort())
-    cleanFinal.Update()
-
+    #extract the volume and surface area poperties from the closed breast
     massProperties = vtk.vtkMassProperties()
-    massProperties.SetInputConnection(cleanFinal.GetOutputPort())
+    massProperties.SetInputConnection(clipClosedBreast.GetOutputPort())
     volume = massProperties.GetVolume()
     volume = volume/ 1000
     volume = round(volume,2)
@@ -371,20 +346,18 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     print('Surface Area in cm^2')
     print(surfaceArea)
 
-    ###################################################################
-
-
-    finalModel = modelsLogic.AddModel(cleanFinal.GetOutputPort()) 
+    #add closed breast to the scene
+    finalModel = modelsLogic.AddModel(clipClosedBreast.GetOutputPort()) 
     finalModel.GetDisplayNode().SetVisibility(True)
-    finalModel.SetName("CroppedClosedBreast")
+    finalModel.SetName(name)
     finalModel.GetDisplayNode().BackfaceCullingOff()
 
-
+    #Ensure the final model is closed so the volume computation is correct
     featureEdges = vtk.vtkFeatureEdges()
     featureEdges.FeatureEdgesOff()
     featureEdges.BoundaryEdgesOn()
     featureEdges.NonManifoldEdgesOn()
-    featureEdges.SetInputData(cleanFinal.GetOutput())
+    featureEdges.SetInputData(clipClosedBreast.GetOutput())
     featureEdges.Update()
     numberOfOpenEdges = featureEdges.GetOutput().GetNumberOfCells()
  
@@ -394,7 +367,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     
     else:
         print("surface is closed (final)")
-
 
   def AddVolumeNode(self):
     #Create volume for scene 
@@ -423,12 +395,12 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     volumeNode.CreateDefaultStorageNode()
     volumeNode.SetName("Volume Node")
 
-  def run(self, inputModel, fidList, outMode):
+  def run(self, inputModel, fidList, outputModel, LeftBreast):
     """
     Run the actual algorithm
     """
-    self.ClosedInputSurface(inputModel, fidList)
-    self.createCroppedModel(inputModel, fidList)
+    #self.ClosedInputSurface(inputModel, fidList)
+    self.createCroppedModel(inputModel, fidList, outputModel, LeftBreast)
     self.AddVolumeNode()
     
     logging.info('Processing completed')
