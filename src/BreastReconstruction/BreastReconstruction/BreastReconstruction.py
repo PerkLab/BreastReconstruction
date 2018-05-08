@@ -83,17 +83,17 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     
     #output Model selector
     
-    self.outputSelector = slicer.qMRMLNodeComboBox()
-    self.outputSelector.nodeTypes = ["vtkMRMLModelNode"]
-    self.outputSelector.selectNodeUponCreation = True
-    self.outputSelector.addEnabled = True
-    self.outputSelector.removeEnabled = True
-    self.outputSelector.noneEnabled = True
-    self.outputSelector.showHidden = False
-    self.outputSelector.showChildNodeTypes = False
-    self.outputSelector.setMRMLScene( slicer.mrmlScene )
-    self.outputSelector.setToolTip( "Pick the output to the algorithm." )
-    parametersFormLayout.addRow("Output Model: ", self.outputSelector)
+    # self.outputSelector = slicer.qMRMLNodeComboBox()
+    # self.outputSelector.nodeTypes = ["vtkMRMLModelNode"]
+    # self.outputSelector.selectNodeUponCreation = True
+    # self.outputSelector.addEnabled = True
+    # self.outputSelector.removeEnabled = True
+    # self.outputSelector.noneEnabled = True
+    # self.outputSelector.showHidden = False
+    # self.outputSelector.showChildNodeTypes = False
+    # self.outputSelector.setMRMLScene( slicer.mrmlScene )
+    # self.outputSelector.setToolTip( "Pick the output to the algorithm." )
+    # parametersFormLayout.addRow("Output Model: ", self.outputSelector)
 
     self.LeftBreastButton = qt.QPushButton("Left Breast")
     self.LeftBreastButton.enabled = False
@@ -105,10 +105,27 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.RightBreastButton.enabled = False
     parametersFormLayout.addRow("Right breast computations", self.RightBreastButton)
 
+    self.VolumeLabelRight = qt.QLabel()
+    self.VolumeLabelRight.setText("Volume in cc")
+    parametersFormLayout.addRow("Right Breast Volume: ", self.VolumeLabelRight)
+
+    self.VolumeLabelLeft = qt.QLabel()
+    self.VolumeLabelLeft.setText("Volume in cc")
+    parametersFormLayout.addRow("Left Breast Volume: ", self.VolumeLabelLeft)
+
+    self.SurfaceAreaLabelRight = qt.QLabel()
+    self.SurfaceAreaLabelRight.setText("Surface Area in cm^2")
+    parametersFormLayout.addRow("Right Breast Surface Area: ", self.SurfaceAreaLabelRight)
+
+    self.SurfaceAreaLabelLeft = qt.QLabel()
+    self.SurfaceAreaLabelLeft.setText("Surface Area in cm^2")
+    parametersFormLayout.addRow("Left Breast Surface Area: ", self.SurfaceAreaLabelLeft)
+
+
+
     # connections
     self.RightBreastButton.connect('clicked(bool)', self.onRightBreastButton)
     self.inputModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
-    self.outputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.inputFiducialSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.LeftBreastButton.connect('clicked(bool)', self.onLeftBreastButton )
 
@@ -135,7 +152,9 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     elif self.inputModelSelector == None:
         self.error("Please enter input model")
     else: 
-        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), self.outputSelector.currentNode(), False)
+        volume = 0
+        surfaceArea = 0
+        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), False,self.VolumeLabelRight, self.SurfaceAreaLabelRight)
 
   def onLeftBreastButton(self):
     logic = BreastReconstructionLogic()
@@ -146,8 +165,8 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     #     logging.error('Please enter an output model')
     elif self.inputModelSelector == None:
         self.error("Please enter input model")
-    else: 
-        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), self.outputSelector.currentNode(), True)
+    else:
+        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), True, self.VolumeLabelLeft, self.SurfaceAreaLabelLeft)
 
 class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
   def FiducialsToPolyData(self, fiducials, polyData):
@@ -236,13 +255,13 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
     #Uncomment to addd the closed model to the scene
 
-    # modelsLogic = slicer.modules.models.logic()
-    # Model = modelsLogic.AddModel(extrude.GetOutputPort()) 
-    # Model.GetDisplayNode().SetVisibility(True)
-    # Model.SetName("ClosedBreast")
-    # Model.GetDisplayNode().BackfaceCullingOff()
+    modelsLogic = slicer.modules.models.logic()
+    Model = modelsLogic.AddModel(extrude.GetOutputPort()) 
+    Model.GetDisplayNode().SetVisibility(True)
+    Model.SetName("ClosedBreast")
+    Model.GetDisplayNode().BackfaceCullingOff()
 
-  def createCroppedModel(self, modelNode, fidList, outputModel, LeftBreast):
+  def createCroppedModel(self, modelNode, fidList, LeftBreast, volume, surfaceArea):
      #Check which breast volume is being computed for 
     if LeftBreast == True:
         name = "ClosedLeftBreast"
@@ -315,6 +334,11 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         extrudeInputWithLoop.SetVector((normVec[0]*-1), (normVec[1]*-1), (normVec[2]*-1))
     extrudeInputWithLoop.Update()
 
+    # finalModel = modelsLogic.AddModel(extrudeInputWithLoop.GetOutputPort()) 
+    # finalModel.GetDisplayNode().SetVisibility(True)
+    # finalModel.SetName("closedBreast")
+    # finalModel.GetDisplayNode().BackfaceCullingOff()
+
     #Auto Orient the normals of the ExtrudeInputWithLoop
     extrudeNormals = vtk.vtkPolyDataNormals()
     extrudeNormals.SetInputData(extrudeInputWithLoop.GetOutput())
@@ -322,7 +346,8 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     extrudeNormals.AutoOrientNormalsOn()
     extrudeNormals.Update()
 
-    plane.SetNormal((normVec[0]*-1), (normVec[1]*-1), (normVec[2]*-1))
+    if LeftBreast == True:
+        plane.SetNormal((normVec[0]*-1), (normVec[1]*-1), (normVec[2]*-1))
     planeCollection = vtk.vtkPlaneCollection()
     planeCollection.AddItem(plane)
 
@@ -335,16 +360,18 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     #extract the volume and surface area poperties from the closed breast
     massProperties = vtk.vtkMassProperties()
     massProperties.SetInputConnection(clipClosedBreast.GetOutputPort())
-    volume = massProperties.GetVolume()
-    volume = volume/ 1000
-    volume = round(volume,2)
+    volumeMP = massProperties.GetVolume()
+    volumeMP = volumeMP/ 1000
+    volumeMP = round(volumeMP,2)
+    volume.setText(volumeMP)
     print('Volume in cc')
-    print(volume)
-    surfaceArea = massProperties.GetSurfaceArea()
-    surfaceArea = surfaceArea / 100
-    surfaceArea = round(surfaceArea, 2)
+    print(volumeMP)
+    surfaceAreaMP = massProperties.GetSurfaceArea()
+    surfaceAreaMP = surfaceAreaMP / 100
+    surfaceAreaMP = round(surfaceAreaMP, 2)
+    surfaceArea.setText(surfaceAreaMP)
     print('Surface Area in cm^2')
-    print(surfaceArea)
+    print(surfaceAreaMP)
 
     #add closed breast to the scene
     finalModel = modelsLogic.AddModel(clipClosedBreast.GetOutputPort()) 
@@ -352,21 +379,21 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     finalModel.SetName(name)
     finalModel.GetDisplayNode().BackfaceCullingOff()
 
-    #Ensure the final model is closed so the volume computation is correct
-    featureEdges = vtk.vtkFeatureEdges()
-    featureEdges.FeatureEdgesOff()
-    featureEdges.BoundaryEdgesOn()
-    featureEdges.NonManifoldEdgesOn()
-    featureEdges.SetInputData(clipClosedBreast.GetOutput())
-    featureEdges.Update()
-    numberOfOpenEdges = featureEdges.GetOutput().GetNumberOfCells()
+    # #Ensure the final model is closed so the volume computation is correct
+    # featureEdges = vtk.vtkFeatureEdges()
+    # featureEdges.FeatureEdgesOff()
+    # featureEdges.BoundaryEdgesOn()
+    # featureEdges.NonManifoldEdgesOn()
+    # featureEdges.SetInputData(clipClosedBreast.GetOutput())
+    # featureEdges.Update()
+    # numberOfOpenEdges = featureEdges.GetOutput().GetNumberOfCells()
  
-    if(numberOfOpenEdges > 0):
-        print("Surface is not closed (final)")
-        print(numberOfOpenEdges)
+    # if(numberOfOpenEdges > 0):
+    #     print("Surface is not closed (final)")
+    #     print(numberOfOpenEdges)
     
-    else:
-        print("surface is closed (final)")
+    # else:
+    #     print("surface is closed (final)")
 
   def AddVolumeNode(self):
     #Create volume for scene 
@@ -395,12 +422,12 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     volumeNode.CreateDefaultStorageNode()
     volumeNode.SetName("Volume Node")
 
-  def run(self, inputModel, fidList, outputModel, LeftBreast):
+  def run(self, inputModel, fidList, LeftBreast, volume, surfaceArea):
     """
     Run the actual algorithm
     """
     #self.ClosedInputSurface(inputModel, fidList)
-    self.createCroppedModel(inputModel, fidList, outputModel, LeftBreast)
+    self.createCroppedModel(inputModel, fidList, LeftBreast, volume, surfaceArea)
     self.AddVolumeNode()
     
     logging.info('Processing completed')
