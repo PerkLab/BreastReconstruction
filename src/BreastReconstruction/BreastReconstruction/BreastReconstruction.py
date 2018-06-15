@@ -269,11 +269,11 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
       name = "ClosedRightBreast"
 
     modelsLogic = slicer.modules.models.logic()
+    InputModel = modelNode.GetPolyData()
 
     # Clip the input model with the plane defined by input points
     plane = vtk.vtkPlane()
     self.LeastSquaresPlane(modelNode, fidList, plane)
-    InputModel = modelNode.GetPolyData()
     clippedInput = vtk.vtkClipPolyData()
     clippedInput.SetInputData(InputModel)
     clippedInput.SetClipFunction(plane)
@@ -315,6 +315,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     loop.SetLoop(PointsPolyData.GetPoints())
     loop.SetNormal(plane.GetNormal())
 
+
     # Clip the clipped input model with the loop
     clippedInputWithLoop = vtk.vtkClipPolyData()
     clippedInputWithLoop.SetClipFunction(loop)  # should be loop
@@ -322,11 +323,6 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     clippedInputWithLoop.SetInsideOut(True)
     clippedInputWithLoop.Update()
 
-    clippedLoopNormal = vtk.vtkPolyDataNormals()
-    clippedLoopNormal.SetInputData(clippedInputWithLoop.GetOutput())
-    clippedLoopNormal.ComputePointNormalsOn()
-    clippedLoopNormal.AutoOrientNormalsOn()
-    clippedLoopNormal.Update()
 
     # close the clippedInputWith loop by using the linearExtrusion filter
     extrudeInputWithLoop = vtk.vtkLinearExtrusionFilter()
@@ -345,15 +341,15 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     extrudeNormals = vtk.vtkPolyDataNormals()
     extrudeNormals.SetInputData(extrudeInputWithLoop.GetOutput())
     extrudeNormals.ComputePointNormalsOn()
-    extrudeNormals.AutoOrientNormalsOn()
+    #Do not use autoorient normals here, it will cause some surfaces not to be closed when
+    #clipped with plane
     extrudeNormals.Update()
-
 
     if LeftBreast == True:
       plane.SetNormal((normVec[0] * -1), (normVec[1] * -1), (normVec[2] * -1))
+
     planeCollection = vtk.vtkPlaneCollection()
     planeCollection.AddItem(plane)
-
 
     clean = vtk.vtkCleanPolyData()
     clean.SetInputData(extrudeNormals.GetOutput())
