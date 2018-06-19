@@ -337,7 +337,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     extrudeInputWithLoop.Update()
 
 
-    # Auto Orient the normals of the ExtrudeInputWithLoop
+    # Cpmpute Point Normals
     extrudeNormals = vtk.vtkPolyDataNormals()
     extrudeNormals.SetInputData(extrudeInputWithLoop.GetOutput())
     extrudeNormals.ComputePointNormalsOn()
@@ -578,7 +578,7 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     PlaneModel.SetName("PlaneModel")
     PlaneModel.GetDisplayNode().BackfaceCullingOff()
 
-    # #create a loop denfined by the input points
+    #create a loop denfined by the input points
     PointsPolyData = vtk.vtkPolyData()
     self.FiducialsToPolyData(fidList, PointsPolyData)
 
@@ -652,21 +652,16 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     clippedInputWithLoop.Update()
 
 
+    #These normals must be flipped so that the back of the breast is orriented the correct way
     Normals = vtk.vtkPolyDataNormals()
     Normals.SetInputData(clippedInputWithLoop.GetOutput())
-    Normals.AutoOrientNormalsOn()
-    Normals.Update()
+    Normals.ComputePointNormalsOn()
+    Normals.ConsistencyOn()
     Normals.FlipNormalsOn()
     Normals.Update()
 
-
-    finalModel = modelsLogic.AddModel(clippedInputWithLoop.GetOutputPort()) 
-    finalModel.GetDisplayNode().SetVisibility(False)
-    finalModel.SetName("clippedInputModel")
-    finalModel.GetDisplayNode().BackfaceCullingOff()
-
     boundaryEdges = vtk.vtkFeatureEdges()
-    boundaryEdges.SetInputConnection(clippedInputWithLoop.GetOutputPort())
+    boundaryEdges.SetInputConnection(Normals.GetOutputPort())
     boundaryEdges.BoundaryEdgesOn()
     boundaryEdges.FeatureEdgesOff()
     boundaryEdges.NonManifoldEdgesOff()
@@ -680,15 +675,14 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     boundaryPoly.SetPoints(boundaryStrips.GetOutput().GetPoints())
     boundaryPoly.SetPolys(boundaryStrips.GetOutput().GetLines())
 
+
+    #####*****Find out why this turns back black an why surface is not closed 
     Normals2 = vtk.vtkPolyDataNormals()
     Normals2.SetInputData(boundaryPoly)
-    Normals2.AutoOrientNormalsOn()
-    Normals2.Update()
+    Normals2.ConsistencyOn()
+    Normals2.SplittingOn()   
 
-    finalModel = modelsLogic.AddModel(Normals2.GetOutput()) 
-    finalModel.GetDisplayNode().SetVisibility(False)
-    finalModel.SetName("breastBack")
-    finalModel.GetDisplayNode().BackfaceCullingOff()
+    Normals2.Update()
 
     appendFilter2 = vtk.vtkAppendPolyData()
     appendFilter2.AddInputData(clippedInputWithLoop.GetOutput())
