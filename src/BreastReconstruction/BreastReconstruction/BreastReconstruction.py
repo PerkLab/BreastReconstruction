@@ -633,13 +633,6 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     implictSplinePlane =  vtk.vtkImplicitPolyDataDistance()
     implictSplinePlane.SetInput(TransformedPlane.GetOutput())
 
-    #This clips input model so only model that lies above plane is kept 
-    # clippedInputhWithPlane = vtk.vtkClipPolyData()
-    # clippedInputhWithPlane.SetClipFunction(implictSplinePlane) #should be loop
-    # clippedInputhWithPlane.SetInputData(InputModel)
-    # clippedInputhWithPlane.SetInsideOut(False)
-    # clippedInputhWithPlane.Update()
-
     ###NOTE: clipping with the selection loop does not work as it will create an open surface... try to clip with the spline
     loop = vtk.vtkImplicitSelectionLoop()
     loop.SetLoop(PointsPolyData.GetPoints())
@@ -663,11 +656,11 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
       extrudeInputWithLoop.SetVector((normVec[0] * -1), (normVec[1] * -1), (normVec[2] * -1))
     extrudeInputWithLoop.Update()
 
+    #Do not use autoorient normals here, it will cause some surfaces not to be closed when
+    #clipped with plane
     extrudeNormals = vtk.vtkPolyDataNormals()
     extrudeNormals.SetInputData(extrudeInputWithLoop.GetOutput())
     extrudeNormals.ComputePointNormalsOn()
-    #Do not use autoorient normals here, it will cause some surfaces not to be closed when
-    #clipped with plane
     extrudeNormals.Update()
 
     clipped = vtk.vtkClipPolyData()
@@ -676,15 +669,11 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     clipped.SetInsideOut(True)
     clipped.Update()
 
-    # implictSplinePlaneCropped =  vtk.vtkImplicitPolyDataDistance()
-    # implictSplinePlaneCropped.SetInput(clipped.GetOutput())
-
     clippedInputhWithPlane = vtk.vtkClipPolyData()
     clippedInputhWithPlane.SetClipFunction(implictSplinePlane) 
     clippedInputhWithPlane.SetInputData(extrudeNormals.GetOutput())
     clippedInputhWithPlane.SetInsideOut(False)
     clippedInputhWithPlane.Update()
-
 
     clippedNormals = vtk.vtkPolyDataNormals()
     clippedNormals.SetInputData(clipped.GetOutput())
@@ -702,45 +691,10 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     clippedWithImplictInput.SetInsideOut(True)
     clippedWithImplictInput.Update()
 
-
-
     finalModel = modelsLogic.AddModel(clipped.GetOutput()) 
     finalModel.GetDisplayNode().SetVisibility(True)
     finalModel.SetName("TransformedPlaneclipped")
     finalModel.GetDisplayNode().BackfaceCullingOff()
-
-
-    #These normals must be flipped so that the back of the breast is orriented the correct way
-    clippedInputNormals = vtk.vtkPolyDataNormals()
-    clippedInputNormals.SetInputData(clippedInputhWithPlane.GetOutput())
-    clippedInputNormals.ComputePointNormalsOn()
-    clippedInputNormals.ConsistencyOn()
-    clippedInputNormals.FlipNormalsOn()
-    clippedInputNormals.Update()
-
-    boundaryEdges = vtk.vtkFeatureEdges()
-    boundaryEdges.SetInputConnection(clippedInputNormals.GetOutputPort())
-    boundaryEdges.BoundaryEdgesOn()
-    boundaryEdges.FeatureEdgesOff()
-    boundaryEdges.NonManifoldEdgesOff()
-    boundaryEdges.ManifoldEdgesOff()
-
-    boundaryStrips = vtk.vtkStripper()
-    boundaryStrips.SetInputConnection(boundaryEdges.GetOutputPort())
-    boundaryStrips.Update()
-
-    boundaryPoly = vtk.vtkPolyData()
-    boundaryPoly.SetPoints(boundaryStrips.GetOutput().GetPoints())
-    boundaryPoly.SetPolys(boundaryStrips.GetOutput().GetLines())
-
-
-    #####*****Find out why this turns back black an why surface is not closed 
-    breastBackNormals = vtk.vtkPolyDataNormals()
-    breastBackNormals.SetInputData(boundaryPoly)
-    breastBackNormals.ConsistencyOn()
-    breastBackNormals.SplittingOn()   
-
-    breastBackNormals.Update()
 
     appendClosedBreast = vtk.vtkAppendPolyData()
     appendClosedBreast.AddInputData(clippedInputhWithPlane.GetOutput())
