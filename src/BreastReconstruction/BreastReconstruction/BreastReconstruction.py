@@ -82,11 +82,12 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     placeWidget.placeModeEnabled = True
 
     self.planeCheckedBox = qt.QCheckBox("Plane cut")
-    self.planeCheckedBox.setCheckState(True)
+   # self.planeCheckedBox.setCheckState(True)
     # planeCheckedBox.setToolTip("Flip model along its X axis")
     parametersFormLayout.addWidget(self.planeCheckedBox)
 
     self.curvedCheckedBox = qt.QCheckBox("Curve cut")
+    self.curvedCheckedBox.setCheckState(True)
     # planeCheckedBox.setToolTip("Flip model along its X axis")
     parametersFormLayout.addWidget(self.curvedCheckedBox)
 
@@ -573,7 +574,7 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     reversePolyData = reversePlane.GetOutput()
 
     modelsLogic = slicer.modules.models.logic()
-    PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort()) 
+    PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort())
     PlaneModel.GetDisplayNode().SetVisibility(False)
     PlaneModel.SetName("PlaneModel")
     PlaneModel.GetDisplayNode().BackfaceCullingOff()
@@ -584,12 +585,12 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
 
 
     # #****************************************************************************
-    #spline model to model back of the chest wall 
+    #spline model to model back of the chest wall
     spline = vtk.vtkParametricSpline()
     splinePoints = vtk.vtkPoints()
     for i in range(PointsPolyData.GetNumberOfPoints()):
         splinePoints.InsertNextPoint(PointsPolyData.GetPoint(i))
-    #should the orgin of the plane by included in the point set or not? 
+    #should the orgin of the plane by included in the point set or not?
     #splinePoints.InsertNextPoint(plane.GetOrigin())
 
     spline.SetPoints(splinePoints)
@@ -625,7 +626,7 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     TransformedPlane.SetInputData(reversePolyData)
     TransformedPlane.SetTransform(splineTransform)
 
-    finalModel = modelsLogic.AddModel(TransformedPlane.GetOutputPort()) 
+    finalModel = modelsLogic.AddModel(TransformedPlane.GetOutputPort())
     finalModel.GetDisplayNode().SetVisibility(False)
     finalModel.SetName("transformedPlane")
     finalModel.GetDisplayNode().BackfaceCullingOff()
@@ -638,7 +639,7 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     loop.SetLoop(PointsPolyData.GetPoints())
     loop.SetNormal(plane.GetNormal())
 
-    #Clip the clipped input model with the loop, so only model within loop is kept 
+    #Clip the clipped input model with the loop, so only model within loop is kept
     clippedInputWithLoop = vtk.vtkClipPolyData()
     clippedInputWithLoop.SetClipFunction(loop) #should be loop
     clippedInputWithLoop.SetInputData(InputModel)
@@ -670,7 +671,7 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     clipped.Update()
 
     clippedInputhWithPlane = vtk.vtkClipPolyData()
-    clippedInputhWithPlane.SetClipFunction(implictSplinePlane) 
+    clippedInputhWithPlane.SetClipFunction(implictSplinePlane)
     clippedInputhWithPlane.SetInputData(extrudeNormals.GetOutput())
     clippedInputhWithPlane.SetInsideOut(False)
     clippedInputhWithPlane.Update()
@@ -691,7 +692,7 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     clippedWithImplictInput.SetInsideOut(True)
     clippedWithImplictInput.Update()
 
-    finalModel = modelsLogic.AddModel(clipped.GetOutput()) 
+    finalModel = modelsLogic.AddModel(clipped.GetOutput())
     finalModel.GetDisplayNode().SetVisibility(True)
     finalModel.SetName("TransformedPlaneclipped")
     finalModel.GetDisplayNode().BackfaceCullingOff()
@@ -705,7 +706,7 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     cleanClosedBreast.SetInputData(appendClosedBreast.GetOutput())
     cleanClosedBreast.Update()
 
-    finalModel = modelsLogic.AddModel(appendClosedBreast.GetOutput()) 
+    finalModel = modelsLogic.AddModel(appendClosedBreast.GetOutput())
     finalModel.GetDisplayNode().SetVisibility(True)
     finalModel.SetName("Closed Breast")
     finalModel.GetDisplayNode().BackfaceCullingOff()
