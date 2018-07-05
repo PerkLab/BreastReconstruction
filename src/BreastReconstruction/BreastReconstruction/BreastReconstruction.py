@@ -303,10 +303,10 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     reversePolyData = reversePlane.GetOutput()
 
     modelsLogic = slicer.modules.models.logic()
-    PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort())
-    PlaneModel.GetDisplayNode().SetVisibility(False)
-    PlaneModel.SetName("PlaneModel")
-    PlaneModel.GetDisplayNode().BackfaceCullingOff()
+    # PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort())
+    # PlaneModel.GetDisplayNode().SetVisibility(False)
+    # PlaneModel.SetName("PlaneModel")
+    # PlaneModel.GetDisplayNode().BackfaceCullingOff()
 
     # create a loop denfined by the input points
     PointsPolyData = vtk.vtkPolyData()
@@ -571,13 +571,11 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     reversePlane.ReverseCellsOn()
     reversePlane.ReverseNormalsOn()
 
-    reversePolyData = reversePlane.GetOutput()
-
     modelsLogic = slicer.modules.models.logic()
-    PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort())
-    PlaneModel.GetDisplayNode().SetVisibility(False)
-    PlaneModel.SetName("PlaneModel")
-    PlaneModel.GetDisplayNode().BackfaceCullingOff()
+    # PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort())
+    # PlaneModel.GetDisplayNode().SetVisibility(False)
+    # PlaneModel.SetName("PlaneModel")
+    # PlaneModel.GetDisplayNode().BackfaceCullingOff()
 
     #create a loop denfined by the input points
     PointsPolyData = vtk.vtkPolyData()
@@ -623,16 +621,87 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     splineTransform.SetBasisToR()
 
     TransformedPlane = vtk.vtkTransformPolyDataFilter()
-    TransformedPlane.SetInputData(reversePolyData)
+    TransformedPlane.SetInputConnection(reversePlane.GetOutputPort())
     TransformedPlane.SetTransform(splineTransform)
 
     finalModel = modelsLogic.AddModel(TransformedPlane.GetOutputPort())
     finalModel.GetDisplayNode().SetVisibility(False)
     finalModel.SetName("transformedPlane")
-    finalModel.GetDisplayNode().BackfaceCullingOff()
+
+    reverseTransformedPlane = vtk.vtkReverseSense()
+    reverseTransformedPlane.SetInputConnection(TransformedPlane.GetOutputPort())
+    reverseTransformedPlane.ReverseCellsOn()
+    reverseTransformedPlane.ReverseNormalsOn()
 
     implictSplinePlane =  vtk.vtkImplicitPolyDataDistance()
     implictSplinePlane.SetInput(TransformedPlane.GetOutput())
+
+
+     # Test creating parametric ellipsoid######################################
+     # modelsLogic = slicer.modules.models.logic()
+     # PointsPolyData = vtk.vtkPolyData()
+     # self.FiducialsToPolyData(fidList, PointsPolyData)
+     # NumberOfPoints = PointsPolyData.GetNumberOfPoints()
+     # #Compute the center of mass of all points
+     # CenterOfMass = vtk.vtkCenterOfMass()
+     # CenterOfMass.SetInputData(PointsPolyData)
+     # CenterOfMass.SetUseScalarsAsWeights(False)
+     # CenterOfMass.Update()
+     #
+     #
+     # squaredDistance1 = vtk.vtkMath().Distance2BetweenPoints(CenterOfMass.GetCenter(),PointsPolyData.GetPoint(1))
+     # dis1 = math.sqrt(squaredDistance1)
+     #
+     # squaredDistance2 = vtk.vtkMath().Distance2BetweenPoints(CenterOfMass.GetCenter(), PointsPolyData.GetPoint(2))
+     # dis2 = math.sqrt(squaredDistance2)
+     #
+     # squaredDistance3 = vtk.vtkMath().Distance2BetweenPoints(CenterOfMass.GetCenter(), PointsPolyData.GetPoint(3))
+     # dis3 = math.sqrt(squaredDistance3)
+     #
+     # squaredDistance4 = vtk.vtkMath().Distance2BetweenPoints(CenterOfMass.GetCenter(), PointsPolyData.GetPoint(4))
+     # dis4 = math.sqrt(squaredDistance4)
+     #
+     #
+     # elipsoid = vtk.vtkParametricEllipsoid()
+     # elipsoid.SetXRadius(0.5)
+     # if squaredDistance1 > squaredDistance3:
+     #   elipsoid.SetYRadius(dis1)
+     # else:
+     #   elipsoid.SetYRadius(dis3)
+     #
+     # if squaredDistance2 > squaredDistance4:
+     #   elipsoid.SetZRadius(dis2)
+     #   # print(dis2)
+     #   # print(elipsoid.GetZRadius())
+     # else:
+     #   elipsoid.SetZRadius(dis4)
+     #   # print(dis4)
+     #   # print("Hi")
+     #   # print(elipsoid.GetZRadius())
+     #
+     #
+     # functionSource = vtk.vtkParametricFunctionSource()
+     # functionSource.SetParametricFunction(elipsoid)
+     # functionSource.Update()
+     #
+     #
+     # eModel = modelsLogic.AddModel(functionSource.GetOutput())
+     # eModel.GetDisplayNode().SetVisibility(False)
+     # eModel.SetName("elipsoid")
+     # eModel.GetDisplayNode().BackfaceCullingOff()
+     #
+     #
+     # transformNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode")
+     # eModel.SetAndObserveTransformNodeID(transformNode.GetID())
+     # transform = vtk.vtkTransform()
+     # transform.Translate(CenterOfMass.GetCenter())
+     # transformNode.SetMatrixTransformToParent(transform.GetMatrix())
+
+     ##############################################################
+
+
+
+    
 
     ###NOTE: clipping with the selection loop does not work as it will create an open surface... try to clip with the spline
     loop = vtk.vtkImplicitSelectionLoop()
@@ -646,8 +715,19 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     clippedInputWithLoop.SetInsideOut(True)
     clippedInputWithLoop.Update()
 
+    noBreast = vtk.vtkClipPolyData()
+    noBreast.SetClipFunction(loop) #should be loop
+    noBreast.SetInputData(InputModel)
+    noBreast.SetInsideOut(False)
+    noBreast.Update()
+
+    finalModel = modelsLogic.AddModel(noBreast.GetOutput())
+    finalModel.GetDisplayNode().SetVisibility(True)
+    finalModel.SetName("No Breast")
+    finalModel.GetDisplayNode().BackfaceCullingOff()
+
     extrudeInputWithLoop = vtk.vtkLinearExtrusionFilter()
-    extrudeInputWithLoop.SetInputData(clippedInputWithLoop.GetOutput())
+    extrudeInputWithLoop.SetInputConnection(clippedInputWithLoop.GetOutputPort())
     extrudeInputWithLoop.SetScaleFactor(100)
     extrudeInputWithLoop.CappingOn()
     normVec = plane.GetNormal()
@@ -660,24 +740,24 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     #Do not use autoorient normals here, it will cause some surfaces not to be closed when
     #clipped with plane
     extrudeNormals = vtk.vtkPolyDataNormals()
-    extrudeNormals.SetInputData(extrudeInputWithLoop.GetOutput())
+    extrudeNormals.SetInputConnection(extrudeInputWithLoop.GetOutputPort())
     extrudeNormals.ComputePointNormalsOn()
     extrudeNormals.Update()
 
     clipped = vtk.vtkClipPolyData()
     clipped.SetClipFunction(loop) #should be loop
-    clipped.SetInputData(TransformedPlane.GetOutput())
+    clipped.SetInputConnection(TransformedPlane.GetOutputPort())
     clipped.SetInsideOut(True)
     clipped.Update()
 
     clippedInputhWithPlane = vtk.vtkClipPolyData()
     clippedInputhWithPlane.SetClipFunction(implictSplinePlane)
-    clippedInputhWithPlane.SetInputData(extrudeNormals.GetOutput())
+    clippedInputhWithPlane.SetInputConnection(extrudeNormals.GetOutputPort())
     clippedInputhWithPlane.SetInsideOut(False)
     clippedInputhWithPlane.Update()
 
     clippedNormals = vtk.vtkPolyDataNormals()
-    clippedNormals.SetInputData(clipped.GetOutput())
+    clippedNormals.SetInputConnection(clipped.GetOutputPort())
     clippedNormals.ComputePointNormalsOn()
     clippedNormals.ConsistencyOn()
     clippedNormals.FlipNormalsOn()
@@ -688,14 +768,14 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
 
     clippedWithImplictInput = vtk.vtkClipPolyData()
     clippedWithImplictInput.SetClipFunction(implictInput) #should be loop
-    clippedWithImplictInput.SetInputData(clippedNormals.GetOutput())
+    clippedWithImplictInput.SetInputConnection(clippedNormals.GetOutputPort())
     clippedWithImplictInput.SetInsideOut(True)
     clippedWithImplictInput.Update()
 
-    finalModel = modelsLogic.AddModel(clipped.GetOutput())
-    finalModel.GetDisplayNode().SetVisibility(True)
-    finalModel.SetName("TransformedPlaneclipped")
-    finalModel.GetDisplayNode().BackfaceCullingOff()
+    # finalModel = modelsLogic.AddModel(clipped.GetOutput())
+    # finalModel.GetDisplayNode().SetVisibility(True)
+    # finalModel.SetName("TransformedPlaneclipped")
+    # finalModel.GetDisplayNode().BackfaceCullingOff()
 
     appendClosedBreast = vtk.vtkAppendPolyData()
     appendClosedBreast.AddInputData(clippedInputhWithPlane.GetOutput())
