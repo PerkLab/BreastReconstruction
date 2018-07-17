@@ -54,7 +54,6 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
     
     #input model slector
-
     self.inputModelSelector = slicer.qMRMLNodeComboBox()
     self.inputModelSelector.nodeTypes = [ "vtkMRMLModelNode" ]
     self.inputModelSelector.selectNodeUponCreation = True
@@ -68,7 +67,6 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     parametersFormLayout.addRow("Input Model: ", self.inputModelSelector)
 
     #input Fiducal slector 
-
     self.inputFiducialSelector = slicer.qSlicerSimpleMarkupsWidget()
     self.inputFiducialSelector.tableWidget().hide()
     self.inputFiducialSelector.setMRMLScene(slicer.mrmlScene)
@@ -82,15 +80,29 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     placeWidget.placeModeEnabled = True
 
     self.planeCheckedBox = qt.QCheckBox("Plane cut")
-   # self.planeCheckedBox.setCheckState(True)
-    # planeCheckedBox.setToolTip("Flip model along its X axis")
     parametersFormLayout.addWidget(self.planeCheckedBox)
 
     self.curvedCheckedBox = qt.QCheckBox("Curve cut")
     self.curvedCheckedBox.setCheckState(True)
-    # planeCheckedBox.setToolTip("Flip model along its X axis")
     parametersFormLayout.addWidget(self.curvedCheckedBox)
 
+    #output model slector
+    #output currently not working
+    self.outputModelSelector = slicer.qMRMLNodeComboBox()
+    self.outputModelSelector.nodeTypes = ["vtkMRMLModelNode"]
+    self.outputModelSelector.selectNodeUponCreation = False
+    self.outputModelSelector.addEnabled = True
+    self.outputModelSelector.renameEnabled = True
+    self.outputModelSelector.removeEnabled = True
+    self.outputModelSelector.noneEnabled = True
+    self.outputModelSelector.showHidden = False
+    self.outputModelSelector.showChildNodeTypes = False
+    self.outputModelSelector.baseName = "Model"
+    self.outputModelSelector.selectNodeUponCreation = True
+    self.outputModelSelector.setMRMLScene( slicer.mrmlScene )
+    parametersFormLayout.addRow("Output Model: ", self.outputModelSelector)
+
+    #Add bottons 
     self.LeftBreastButton = qt.QPushButton("Left Breast")
     self.LeftBreastButton.enabled = False
     parametersFormLayout.addRow("Left breast computations", self.LeftBreastButton)
@@ -120,6 +132,7 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.inputModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.inputFiducialSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
     self.LeftBreastButton.connect('clicked(bool)', self.onLeftBreastButton )
+    self.outputModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -149,7 +162,7 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     elif self.inputModelSelector == None:
         self.error("Please enter input model")
     else: 
-        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), False,self.VolumeLabelRight, self.SurfaceAreaLabelRight)
+        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), False,self.VolumeLabelRight, self.SurfaceAreaLabelRight, self.outputModelSelector.currentNode())
 
   def onLeftBreastButton(self, cutPlane):
     if self.planeCheckedBox.isChecked():
@@ -166,7 +179,7 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     elif self.inputModelSelector == None:
         self.error("Please enter input model")
     else:
-        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), True, self.VolumeLabelLeft, self.SurfaceAreaLabelLeft)
+        logic.run(self.inputModelSelector.currentNode(),self.inputFiducialSelector.currentNode(), True, self.VolumeLabelLeft, self.SurfaceAreaLabelLeft, self.outputModelSelector.currentNode())
 
 class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
 
@@ -262,7 +275,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     Model.SetName("ClosedBreast")
     Model.GetDisplayNode().BackfaceCullingOff()
 
-  def createCroppedModel(self, modelNode, fidList, LeftBreast, volume, surfaceArea):
+  def createCroppedModel(self, modelNode, fidList, LeftBreast, volume, surfaceArea, output):
     # Check which breast volume is being computed for
     if LeftBreast == True:
       name = "ClosedLeftBreast"
@@ -303,10 +316,6 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     reversePolyData = reversePlane.GetOutput()
 
     modelsLogic = slicer.modules.models.logic()
-    # PlaneModel = modelsLogic.AddModel(reversePlane.GetOutputPort())
-    # PlaneModel.GetDisplayNode().SetVisibility(False)
-    # PlaneModel.SetName("PlaneModel")
-    # PlaneModel.GetDisplayNode().BackfaceCullingOff()
 
     # create a loop denfined by the input points
     PointsPolyData = vtk.vtkPolyData()
@@ -361,6 +370,9 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     clipClosedBreast.SetClippingPlanes(planeCollection)
     clipClosedBreast.TriangulationErrorDisplayOn()
     clipClosedBreast.Update()
+
+    # output.SetPolyDataConnection(clipClosedBreast.GetOutputPort())
+    # output.GetModelDisplayNode().VisibilityOn()
 
 
     # extract the volume and surface area poperties from the closed breast
@@ -428,11 +440,11 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     volumeNode.CreateDefaultStorageNode()
     volumeNode.SetName("Volume Node")
 
-  def run(self, inputModel, fidList, LeftBreast, volume, surfaceArea):
+  def run(self, inputModel, fidList, LeftBreast, volume, surfaceArea, output):
     """
     Run the actual algorithm
     """
-    self.createCroppedModel(inputModel, fidList, LeftBreast, volume, surfaceArea)
+    self.createCroppedModel(inputModel, fidList, LeftBreast, volume, surfaceArea, output)
     self.AddVolumeNode()
     
     logging.info('Processing completed')
@@ -533,7 +545,7 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     Model.SetName("ClosedBreast")
     Model.GetDisplayNode().BackfaceCullingOff()
 
-  def createCroppedModel(self, modelNode, fidList, LeftBreast, volume, surfaceArea):
+  def createCroppedModel(self, modelNode, fidList, LeftBreast, volume, surfaceArea, output):
      #Check which breast volume is being computed for 
     if LeftBreast == True:
         name = "ClosedLeftBreast"
@@ -627,11 +639,6 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     finalModel = modelsLogic.AddModel(TransformedPlane.GetOutputPort())
     finalModel.GetDisplayNode().SetVisibility(False)
     finalModel.SetName("transformedPlane")
-
-    reverseTransformedPlane = vtk.vtkReverseSense()
-    reverseTransformedPlane.SetInputConnection(TransformedPlane.GetOutputPort())
-    reverseTransformedPlane.ReverseCellsOn()
-    reverseTransformedPlane.ReverseNormalsOn()
 
     implictSplinePlane =  vtk.vtkImplicitPolyDataDistance()
     implictSplinePlane.SetInput(TransformedPlane.GetOutput())
@@ -786,6 +793,9 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     cleanClosedBreast.SetInputData(appendClosedBreast.GetOutput())
     cleanClosedBreast.Update()
 
+    # output.SetPolyDataConnection(appendClosedBreast.GetOutputPort())
+    # output.GetModelDisplayNode().VisibilityOn()
+
     finalModel = modelsLogic.AddModel(appendClosedBreast.GetOutput())
     finalModel.GetDisplayNode().SetVisibility(True)
     finalModel.SetName("Closed Breast")
@@ -850,11 +860,11 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     volumeNode.CreateDefaultStorageNode()
     volumeNode.SetName("Volume Node")
 
-  def run(self, inputModel, fidList, LeftBreast, volume, surfaceArea):
+  def run(self, inputModel, fidList, LeftBreast, volume, surfaceArea, output):
     """
     Run the actual algorithm
     """
-    self.createCroppedModel(inputModel, fidList, LeftBreast, volume, surfaceArea)
+    self.createCroppedModel(inputModel, fidList, LeftBreast, volume, surfaceArea, output)
     self.AddVolumeNode()
     
     logging.info('Processing completed')
