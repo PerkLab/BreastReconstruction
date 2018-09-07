@@ -53,7 +53,7 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     # Layout within the dummy collapsible button
     parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
     
-    #input model slector
+    #input model selector
     self.inputModelSelector = slicer.qMRMLNodeComboBox()
     self.inputModelSelector.nodeTypes = [ "vtkMRMLModelNode" ]
     self.inputModelSelector.selectNodeUponCreation = True
@@ -66,14 +66,14 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.inputModelSelector.setToolTip( "Pick the input to the algorithm." )
     parametersFormLayout.addRow("Input Model: ", self.inputModelSelector)
 
-    #input Fiducal slector 
+    #input Fiducal selector
     self.inputFiducialSelector = slicer.qSlicerSimpleMarkupsWidget()
     self.inputFiducialSelector.tableWidget().hide()
     self.inputFiducialSelector.setMRMLScene(slicer.mrmlScene)
     self.inputFiducialSelector.setToolTip( "Pick the fiducials to define the region of interest." )
     self.inputFiducialSelector.setNodeBaseName ("BreastFiducials")
     parametersFormLayout.addRow("Input fiducials: ", self.inputFiducialSelector)
-    # Enable place multiple marukps by default
+    # Enable place multiple markups by default
     placeWidget = self.inputFiducialSelector.markupsPlaceWidget()
     placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
     placeWidget.placeModeEnabled = False
@@ -86,7 +86,7 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.curvedCheckedBox.setCheckState(True)
     parametersFormLayout.addWidget(self.curvedCheckedBox)
 
-    #output model slector
+    #output model selector
     #output currently not working
     self.outputModelSelector = slicer.qMRMLNodeComboBox()
     self.outputModelSelector.nodeTypes = ["vtkMRMLModelNode"]
@@ -102,7 +102,7 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
     self.outputModelSelector.setMRMLScene( slicer.mrmlScene )
     parametersFormLayout.addRow("Output Model: ", self.outputModelSelector)
 
-    #Add bottons 
+    #Add buttons
     self.LeftBreastButton = qt.QPushButton("Left Breast")
     self.LeftBreastButton.enabled = False
     parametersFormLayout.addRow("Left breast computations", self.LeftBreastButton)
@@ -226,7 +226,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     for i in range(NumberOfPoints):
         for j in range(1, NumberOfPoints):
             for k in range(2, NumberOfPoints):
-                #to ensure no points immediately beside each other are slected
+                #to ensure no points immediately beside each other are selected
                 if abs(i - j) > 1 and abs(i- k) > 1 and abs(j-k)> 1 and abs(i - j) < (NumberOfPoints - 1) and abs(i- k) < (NumberOfPoints -1):
                     triangle = vtk.vtkTriangle()
                     pi = PointsPolyData.GetPoint(i)
@@ -250,7 +250,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
   def ClosedInputSurface(self, modelNode, fidList):
     #Create closed surface for clipping
     #Closed surface is created using the linearExtrusion filter
-    #The sirface is extruded in the direction of the breast normal
+    #The surface is extruded in the direction of the breast normal
     extrude = vtk.vtkLinearExtrusionFilter()
     plane = vtk.vtkPlane()
     self.LeastSquaresPlane(modelNode,fidList, plane)
@@ -267,13 +267,13 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     extrude.CappingOn()
     extrude.Update()
 
-    #Uncomment to addd the closed model to the scene
+    #Uncomment to add the closed model to the scene
 
-    modelsLogic = slicer.modules.models.logic()
-    Model = modelsLogic.AddModel(extrude.GetOutputPort()) 
-    Model.GetDisplayNode().SetVisibility(True)
-    Model.SetName("ClosedBreast")
-    Model.GetDisplayNode().BackfaceCullingOff()
+    # modelsLogic = slicer.modules.models.logic()
+    # Model = modelsLogic.AddModel(extrude.GetOutputPort())
+    # Model.GetDisplayNode().SetVisibility(False)
+    # Model.SetName("ClosedBreast")
+    # Model.GetDisplayNode().BackfaceCullingOff()
 
   def createCroppedModel(self, modelNode, fidList, LeftBreast, volume, surfaceArea, output):
     # Check which breast volume is being computed for
@@ -317,7 +317,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
 
     modelsLogic = slicer.modules.models.logic()
 
-    # create a loop denfined by the input points
+    # create a loop defined by the input points
     PointsPolyData = vtk.vtkPolyData()
     self.FiducialsToPolyData(fidList, PointsPolyData)
 
@@ -347,7 +347,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     extrudeInputWithLoop.Update()
 
 
-    # Cpmpute Point Normals
+    # Compute Point Normals
     extrudeNormals = vtk.vtkPolyDataNormals()
     extrudeNormals.SetInputData(extrudeInputWithLoop.GetOutput())
     extrudeNormals.ComputePointNormalsOn()
@@ -375,7 +375,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     # output.GetModelDisplayNode().VisibilityOn()
 
 
-    # extract the volume and surface area poperties from the closed breast
+    # extract the volume and surface area properties from the closed breast
     massProperties = vtk.vtkMassProperties()
     massProperties.SetInputConnection(clipClosedBreast.GetOutputPort())
     volumeMP = massProperties.GetVolume()
@@ -393,7 +393,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
 
     # add closed breast to the scene
     finalModel = modelsLogic.AddModel(clipClosedBreast.GetOutputPort())
-    finalModel.GetDisplayNode().SetVisibility(True)
+    finalModel.GetDisplayNode().SetVisibility(False)
     finalModel.SetName(name)
     finalModel.GetDisplayNode().BackfaceCullingOff()
 
@@ -422,7 +422,7 @@ class BreastReconstructionPlaneLogic(ScriptedLoadableModuleLogic):
     imageData=vtk.vtkImageData()
     imageData.SetDimensions(imageSize)
     imageData.AllocateScalars(voxelType, 1)
-    thresholder=vtk.vtkImageThreshold()
+    thresholder = vtk.vtkImageThreshold()
     thresholder.SetInputData(imageData)
     thresholder.SetInValue(0)
     thresholder.SetOutValue(0)
@@ -713,6 +713,9 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     ###NOTE: clipping with the selection loop does not work as it will create an open surface... try to clip with the spline
     loop = vtk.vtkImplicitSelectionLoop()
     loop.SetLoop(PointsPolyData.GetPoints())
+    v1 = -1*plane.GetNormal()[0]
+    v2 = -1 * plane.GetNormal()[1]
+    v3 = -1 * plane.GetNormal()[2]
     loop.SetNormal(plane.GetNormal())
 
     #Clip the clipped input model with the loop, so only model within loop is kept
@@ -728,10 +731,10 @@ class BreastReconstructionCurveLogic(ScriptedLoadableModuleLogic):
     noBreast.SetInsideOut(False)
     noBreast.Update()
 
-    finalModel = modelsLogic.AddModel(noBreast.GetOutput())
-    finalModel.GetDisplayNode().SetVisibility(True)
-    finalModel.SetName("No Breast")
-    finalModel.GetDisplayNode().BackfaceCullingOff()
+    # finalModel = modelsLogic.AddModel(noBreast.GetOutput())
+    # finalModel.GetDisplayNode().SetVisibility(True)
+    # finalModel.SetName("No Breast")
+    # finalModel.GetDisplayNode().BackfaceCullingOff()
 
     extrudeInputWithLoop = vtk.vtkLinearExtrusionFilter()
     extrudeInputWithLoop.SetInputConnection(clippedInputWithLoop.GetOutputPort())
