@@ -268,11 +268,80 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     clippedInput.SetInsideOut(LeftBreast)
     clippedInput.Update()
 
+    # create visual representation of the plane to add to the scene
+    cutterPlane = vtk.vtkCutter()
+    cutterPlane.SetCutFunction(plane)
+    cutterPlane.SetInputData(clippedInput.GetOutput())
+    cutterPlane.Update()
+
+    cutterModel = vtk.vtkPolyData()
+    cutterModel = cutterPlane.GetOutput()
+    surfPlane = vtk.vtkSurfaceReconstructionFilter()
+    surfPlane.SetInputData(cutterModel)
+    cfPlane = vtk.vtkContourFilter()
+    cfPlane.SetInputConnection(surfPlane.GetOutputPort())
+    cfPlane.SetValue(0, 0.0)
+    reversePlane = vtk.vtkReverseSense()
+    reversePlane.SetInputConnection(cfPlane.GetOutputPort())
+    reversePlane.ReverseCellsOn()
+    reversePlane.ReverseNormalsOn()
+
 
     # create a loop defined by the input points
     PointsPolyData = vtk.vtkPolyData()
     self.FiducialsToPolyData(fidList, PointsPolyData)
 
+
+
+
+
+    # #****************************************************************************
+    # spline model to model back of the chest wall
+    spline = vtk.vtkParametricSpline()
+    splinePoints = vtk.vtkPoints()
+    for i in range(PointsPolyData.GetNumberOfPoints()):
+        splinePoints.InsertNextPoint(PointsPolyData.GetPoint(i))
+
+    spline.SetPoints(splinePoints)
+    spline.ClosedOn()
+    functionSource = vtk.vtkParametricFunctionSource()
+    functionSource.SetParametricFunction(spline)
+    implictSpline = vtk.vtkImplicitPolyDataDistance()
+    implictSpline.SetInput(functionSource.GetOutput())
+
+    # Create a new dataset which is the contour points projected onto the plane
+    projectedPoints = vtk.vtkPoints()
+    projectedPointsPolyData = vtk.vtkPolyData()
+    NumberOfPoints = splinePoints.GetNumberOfPoints()
+    for i in range(NumberOfPoints):
+        p = splinePoints.GetPoint(i)
+        pProj = [0, 0, 0]
+        plane.ProjectPoint(p, pProj)
+        projectedPoints.InsertNextPoint(pProj)
+    projectedPointsPolyData.SetPoints(projectedPoints)
+
+    spline2 = vtk.vtkParametricSpline()
+    spline2.SetPoints(projectedPointsPolyData.GetPoints())
+    spline2.ClosedOn()
+    functionSource2 = vtk.vtkParametricFunctionSource()
+    functionSource2.SetParametricFunction(spline2)
+
+    splineTransform = vtk.vtkThinPlateSplineTransform()
+    splineTransform.SetSourceLandmarks(projectedPoints)
+    splineTransform.SetTargetLandmarks(PointsPolyData.GetPoints())
+    splineTransform.SetBasisToR()
+
+    TransformedPlane = vtk.vtkTransformPolyDataFilter()
+    TransformedPlane.SetInputConnection(reversePlane.GetOutputPort())
+    TransformedPlane.SetTransform(splineTransform)
+
+    finalModel = modelsLogic.AddModel(TransformedPlane.GetOutputPort())
+    finalModel.GetDisplayNode().SetVisibility(False)
+    finalModel.SetName("transformedPlane")
+
+    implictSplinePlane = vtk.vtkImplicitPolyDataDistance()
+    implictSplinePlane.SetInput(TransformedPlane.GetOutput())
+#######################################################################################
     loop = vtk.vtkImplicitSelectionLoop()
     loop.SetLoop(PointsPolyData.GetPoints())
     loop.SetNormal(plane.GetNormal())
@@ -280,15 +349,21 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
     # Clip the clipped input model with the loop
     clippedInputWithLoop = vtk.vtkClipPolyData()
-    clippedInputWithLoop.SetClipFunction(loop)  # should be loop
+    clippedInputWithLoop.SetClipFunction(implictSplinePlane)  # should be loop
     clippedInputWithLoop.SetInputData(clippedInput.GetOutput())
-    clippedInputWithLoop.SetInsideOut(True)
+    clippedInputWithLoop.SetInsideOut(False)
     clippedInputWithLoop.Update()
+
+    # No use the vtkPolyDataConnectivityFilter to extract the largest region
+    connectedInput = vtk.vtkPolyDataConnectivityFilter()
+    connectedInput.SetInputConnection(clippedInputWithLoop.GetOutputPort())
+    connectedInput.SetExtractionModeToLargestRegion()
+    connectedInput.Update()
 
 
     # close the clippedInputWith loop by using the linearExtrusion filter
     extrudeInputWithLoop = vtk.vtkLinearExtrusionFilter()
-    extrudeInputWithLoop.SetInputData(clippedInputWithLoop.GetOutput())
+    extrudeInputWithLoop.SetInputData(connectedInput.GetOutput())
     extrudeInputWithLoop.SetScaleFactor(100)
     extrudeInputWithLoop.CappingOn()
     normVec = plane.GetNormal()
@@ -322,10 +397,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
     clipClosedBreast.SetClippingPlanes(planeCollection)
     clipClosedBreast.TriangulationErrorDisplayOn()
     clipClosedBreast.Update()
-
-    # output.SetPolyDataConnection(clipClosedBreast.GetOutputPort())
-    # output.GetModelDisplayNode().VisibilityOn()
-
 
     # extract the volume and surface area properties from the closed breast
     massProperties = vtk.vtkMassProperties()
@@ -413,8 +484,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
      splinePoints = vtk.vtkPoints()
      for i in range(PointsPolyData.GetNumberOfPoints()):
        splinePoints.InsertNextPoint(PointsPolyData.GetPoint(i))
-     # should the origin of the plane by included in the point set or not?
-     # splinePoints.InsertNextPoint(plane.GetOrigin())
 
      spline.SetPoints(splinePoints)
      spline.ClosedOn()
@@ -465,21 +534,29 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
      v3 = -1 * plane.GetNormal()[2]
      loop.SetNormal(plane.GetNormal())
 
-     # Clip the clipped input model with the loop, so only model within loop is kept
+     # Clip the clipped input model with the spline plane so that only
+     # parts of the scan about the spline plane are kept
      clippedInputWithLoop = vtk.vtkClipPolyData()
-     clippedInputWithLoop.SetClipFunction(loop)  # should be loop
+     clippedInputWithLoop.SetClipFunction(implictSplinePlane)  # should be loop
      clippedInputWithLoop.SetInputData(InputModel)
-     clippedInputWithLoop.SetInsideOut(True)
+     clippedInputWithLoop.SetInsideOut(False)
      clippedInputWithLoop.Update()
 
-     noBreast = vtk.vtkClipPolyData()
-     noBreast.SetClipFunction(loop)  # should be loop
-     noBreast.SetInputData(InputModel)
-     noBreast.SetInsideOut(False)
-     noBreast.Update()
+     # No use the vtkPolyDataConnectivityFilter to extract the largest region
+     connectedInput = vtk.vtkPolyDataConnectivityFilter()
+     connectedInput.SetInputConnection(clippedInputWithLoop.GetOutputPort())
+     connectedInput.SetExtractionModeToLargestRegion()
+     connectedInput.Update()
+
+
+     finalModel = modelsLogic.AddModel(connectedInput.GetOutputPort())
+     finalModel.GetDisplayNode().SetVisibility(True)
+     finalModel.SetName("clippedInput")
+     finalModel.GetDisplayNode().BackfaceCullingOff()
+
 
      extrudeInputWithLoop = vtk.vtkLinearExtrusionFilter()
-     extrudeInputWithLoop.SetInputConnection(clippedInputWithLoop.GetOutputPort())
+     extrudeInputWithLoop.SetInputConnection(connectedInput.GetOutputPort())
      extrudeInputWithLoop.SetScaleFactor(100)
      extrudeInputWithLoop.CappingOn()
      normVec = plane.GetNormal()
@@ -504,37 +581,38 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
      clippedInputhWithPlane = vtk.vtkClipPolyData()
      clippedInputhWithPlane.SetClipFunction(implictSplinePlane)
-     clippedInputhWithPlane.SetInputConnection(extrudeNormals.GetOutputPort())
+     clippedInputhWithPlane.SetInputConnection(extrudeInputWithLoop.GetOutputPort())
      #When the function is not clipping correctly ie clipping behind breast instead
-     # of front set inside out to False 
-     clippedInputhWithPlane.SetInsideOut(True)
+     # of front set inside out to False
+     clippedInputhWithPlane.SetInsideOut(False)
      clippedInputhWithPlane.Update()
-
-     finalModel = modelsLogic.AddModel(clippedInputhWithPlane.GetOutput())
-     finalModel.GetDisplayNode().SetVisibility(True)
-     finalModel.SetName("????")
-     finalModel.GetDisplayNode().BackfaceCullingOff()
 
      clippedNormals = vtk.vtkPolyDataNormals()
      clippedNormals.SetInputConnection(clipped.GetOutputPort())
      clippedNormals.ComputePointNormalsOn()
      clippedNormals.ConsistencyOn()
+     #If line 509 is changed to true then line 517 must also be commented out
      clippedNormals.FlipNormalsOn()
      clippedNormals.Update()
 
      implictInput = vtk.vtkImplicitPolyDataDistance()
-     implictInput.SetInput(clippedInputhWithPlane.GetOutput())
+     implictInput.SetInput(extrudeNormals.GetOutput())
 
      clippedWithImplictInput = vtk.vtkClipPolyData()
      clippedWithImplictInput.SetClipFunction(implictInput)  # should be loop
-     clippedWithImplictInput.SetInputConnection(clippedNormals.GetOutputPort())
+     clippedWithImplictInput.SetInputConnection(TransformedPlane.GetOutputPort())
      clippedWithImplictInput.SetInsideOut(True)
      clippedWithImplictInput.Update()
 
      appendClosedBreast = vtk.vtkAppendPolyData()
-     appendClosedBreast.AddInputData(clippedInputhWithPlane.GetOutput())
+     appendClosedBreast.AddInputData(clippedInputhWithPlane.GetOutput()) #need to change these variables
      appendClosedBreast.AddInputData(clippedWithImplictInput.GetOutput())
      appendClosedBreast.Update()
+
+     connectedOutput = vtk.vtkPolyDataConnectivityFilter()
+     connectedOutput.SetInputConnection(appendClosedBreast.GetOutputPort())
+     connectedOutput.SetExtractionModeToLargestRegion()
+     connectedOutput.Update()
 
      cleanClosedBreast = vtk.vtkCleanPolyData()
      cleanClosedBreast.SetInputData(appendClosedBreast.GetOutput())
@@ -543,14 +621,14 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
      # output.SetPolyDataConnection(appendClosedBreast.GetOutputPort())
      # output.GetModelDisplayNode().VisibilityOn()
 
-     finalModel = modelsLogic.AddModel(appendClosedBreast.GetOutput())
+     finalModel = modelsLogic.AddModel(cleanClosedBreast.GetOutput())
      finalModel.GetDisplayNode().SetVisibility(True)
      finalModel.SetName("Closed Breast")
      finalModel.GetDisplayNode().BackfaceCullingOff()
 
      print("New Volume and SurfaceA")
      massProperties = vtk.vtkMassProperties()
-     massProperties.SetInputData(appendClosedBreast.GetOutput())
+     massProperties.SetInputData(cleanClosedBreast.GetOutput())
      volumeMP = massProperties.GetVolume()
      volumeMP = volumeMP / 1000
      volumeMP = round(volumeMP, 2)
@@ -569,7 +647,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
      featureEdges.FeatureEdgesOff()
      featureEdges.BoundaryEdgesOn()
      featureEdges.NonManifoldEdgesOn()
-     featureEdges.SetInputData(appendClosedBreast.GetOutput())
+     featureEdges.SetInputData(cleanClosedBreast.GetOutput())
      featureEdges.Update()
      numberOfOpenEdges = featureEdges.GetOutput().GetNumberOfCells()
 
