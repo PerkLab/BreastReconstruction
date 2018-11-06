@@ -87,15 +87,6 @@ class BreastReconstructionWidget(ScriptedLoadableModuleWidget):
 
         parametersFormLayout.addRow("Right fiducials: ", self.inputRFiducialSelector)
 
-        # # points on Model
-        # self.FiducialSelector = slicer.qSlicerSimpleMarkupsWidget()
-        # self.FiducialSelector.tableWidget().hide()
-        # self.FiducialSelector.setMRMLScene(slicer.mrmlScene)
-        # self.FiducialSelector.setToolTip("Points on Model.")
-        # self.FiducialSelector.setNodeBaseName("PointFiducials")
-        #
-        # parametersFormLayout.addRow("Point fiducials: ", self.FiducialSelector)
-        # Enable place multiple markups by default
         placeWidget = self.inputRFiducialSelector.markupsPlaceWidget()
         placeWidget.placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
         placeWidget.placeModeEnabled = False
@@ -250,195 +241,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
     def cropWithPlane(self, modelNode, fidList, LeftBreast, volume, surfaceArea):
 
-        # # Check which breast volume is being computed for
-        # if LeftBreast == True:
-        #     name = "ClosedLeftBreast"
-        # else:
-        #     name = "ClosedRightBreast"
-        #
-        # modelsLogic = slicer.modules.models.logic()
-        # InputModel = modelNode.GetPolyData()
-        #
-        #
-        # #Test creating parametric ellipsoid######################################
-        # modelsLogic = slicer.modules.models.logic()
-        # PointsPolyData = vtk.vtkPolyData()
-        # self.FiducialsToPolyData(fidList, PointsPolyData)
-        # NumberOfPoints = PointsPolyData.GetNumberOfPoints()
-        # # Compute the center of mass of all points
-        # CenterOfMass = vtk.vtkCenterOfMass()
-        # CenterOfMass.SetInputData(PointsPolyData)
-        # CenterOfMass.SetUseScalarsAsWeights(False)
-        # CenterOfMass.Update()
-        #
-        # squaredDistance1 = vtk.vtkMath().Distance2BetweenPoints(CenterOfMass.GetCenter(), PointsPolyData.GetPoint(1))
-        # dis1 = math.sqrt(squaredDistance1)
-        #
-        # squaredDistance2 = vtk.vtkMath().Distance2BetweenPoints(CenterOfMass.GetCenter(), PointsPolyData.GetPoint(2))
-        # dis2 = math.sqrt(squaredDistance2)
-        #
-        # squaredDistance3 = vtk.vtkMath().Distance2BetweenPoints(CenterOfMass.GetCenter(), PointsPolyData.GetPoint(3))
-        # dis3 = math.sqrt(squaredDistance3)
-        #
-        # squaredDistance4 = vtk.vtkMath().Distance2BetweenPoints(CenterOfMass.GetCenter(), PointsPolyData.GetPoint(4))
-        # dis4 = math.sqrt(squaredDistance4)
-        #
-        # elipsoid = vtk.vtkParametricEllipsoid()
-        # elipsoid.SetZRadius(0.5)
-        # elipsoid.SetXRadius(max(dis1, dis3))
-        # elipsoid.SetYRadius(max(dis2,dis4))
-        #
-        # sphere = vtk.vtkSphereSource()
-        # sphere.SetThetaResolution(12)
-        # sphere.SetPhiResolution(12)
-        # sphere.SetCenter(CenterOfMass.GetCenter())
-        # sphere.SetRadius(max(dis1,dis3))
-        #
-        # functionSource = vtk.vtkParametricFunctionSource()
-        # functionSource.SetParametricFunction(elipsoid)
-        # functionSource.Update()
-        #
-        # ##########################################################################################
-        # eModel = modelsLogic.AddModel(functionSource.GetOutputPort())
-        # eModel.GetDisplayNode().SetVisibility(True)
-        # eModel.SetName("elipsoid")
-        # eModel.GetDisplayNode().BackfaceCullingOff()
-        #
-        # # sModel = modelsLogic.AddModel(sphere.GetOutputPort())
-        # # sModel.GetDisplayNode().SetVisibility(True)
-        # # sModel.SetName("sphere")
-        # # sModel.GetDisplayNode().BackfaceCullingOff()
-        #
-        #
-        #
-        #
-        #
-        # #####################################################################################################
-        # #Creating best fit plane
-        # plane = vtk.vtkPlane()
-        # pointsPolyData = vtk.vtkPolyData()
-        # self.FiducialsToPolyData(fidList, PointsPolyData)
-        # NumberOfPoints = PointsPolyData.GetNumberOfPoints()
-        # # Compute the center of mass of all points
-        # CenterOfMass = vtk.vtkCenterOfMass()
-        # CenterOfMass.SetInputData(PointsPolyData)
-        # CenterOfMass.SetUseScalarsAsWeights(False)
-        # CenterOfMass.Update()
-        # center = CenterOfMass.GetCenter()
-        #
-        # tempPlane = vtk.vtkPlane()
-        # tempPlane.SetOrigin(center)
-        #
-        # plane.SetOrigin(center)
-        #
-        # bestDistance = float('inf')
-        # for i in range((NumberOfPoints)):
-        #     for j in range(1,(NumberOfPoints)):
-        #         for k in range(2, NumberOfPoints):
-        #             if (i != j) and (i != k) and (j != k):
-        #                 #Create plane of best fit from points
-        #                 triangle = vtk.vtkTriangle()
-        #                 pi = PointsPolyData.GetPoint(i)
-        #                 pj = PointsPolyData.GetPoint(j)
-        #                 pk = PointsPolyData.GetPoint(k)
-        #                 # compute the normal of the 3 selected points
-        #                 normalVector = [0.0, 0.0, 0.0]
-        #                 triangle.ComputeNormal(pi, pj, pk, normalVector)
-        #                 tempPlane.SetNormal(normalVector)
-        #                 distance = 0
-        #                 for p in range(NumberOfPoints):
-        #                     # compute the distance from each point to the plane
-        #                     point = PointsPolyData.GetPoint(p)
-        #                     distance = distance + abs(tempPlane.DistanceToPlane(point))
-        #                 averageDistance = distance / NumberOfPoints
-        #                 if averageDistance < bestDistance:
-        #                     # select plane if average distance value is lower
-        #                     bestDistance = averageDistance
-        #                     plane.SetNormal(normalVector)
-        #
-        # #create visual representation of the plane to add to the scene
-        # cutterPlane = vtk.vtkCutter()
-        # cutterPlane.SetCutFunction(plane)
-        # cutterPlane.SetInputData(InputModel)
-        # cutterPlane.Update()
-        #
-        # cutterModel = vtk.vtkPolyData()
-        # cutterModel = cutterPlane.GetOutput()
-        # surfPlane = vtk.vtkSurfaceReconstructionFilter()
-        # surfPlane.SetInputData(cutterModel)
-        # cfPlane = vtk.vtkContourFilter()
-        # cfPlane.SetInputConnection(surfPlane.GetOutputPort())
-        # cfPlane.SetValue(0, 0.0)
-        # reversePlane = vtk.vtkReverseSense()
-        # reversePlane.SetInputConnection(cfPlane.GetOutputPort())
-        # reversePlane.ReverseCellsOn()
-        # reversePlane.ReverseNormalsOn()
-        #
-        # pModel = modelsLogic.AddModel(reversePlane.GetOutputPort())
-        # pModel.GetDisplayNode().SetVisibility(True)
-        # pModel.SetName("plane")
-        # pModel.GetDisplayNode().BackfaceCullingOff()
-        #     #need to compute the transform between the plane and the ellipsoid
-        #
-        #
-        # ##################################################################################
-        # #Computing rotation between ellipsoid and plane by computing the rotation between the two normals
-        # #Note: The ellipsoid is parallel to the x y axis, so it's normal vector is the z axis
-        # mathvtk = vtk.vtkMath()
-        # norm1 = [0, 0, 1]
-        # norm2 = plane.GetNormal()
-        # vec = [0,0,0]
-        # mathvtk.Cross(norm2,norm1,vec)
-        # cosT = mathvtk.Dot(norm2,norm1)
-        # sinT = mathvtk.Norm(vec)
-        # theta = math.atan2(sinT, cosT)
-        # if sinT != 0:
-        #     vec[0] /= sinT
-        #     vec[1] /= sinT
-        #     vec[2] /= sinT
-        # #Convert to quaternion
-        # cosT = math.cos(0.5*theta)
-        # sinT = math.sin(0.5*theta)
-        # quat = [0,0,0,0]
-        # quat[0] = cosT
-        # quat[1] = vec[0]*sinT
-        # quat[2] = vec[1]*sinT
-        # quat[3] = vec[2]*sinT
-        # #convert to a matrix
-        # mat = [[0,0,0],[0,0,0],[0,0,0]]
-        # mathvtk.QuaternionToMatrix3x3(quat, mat)
-        # cent = (CenterOfMass.GetCenter())
-        # cent2 = [0, 0 ,0]
-        # cent2[0] = cent[0]*-1
-        # cent2[1] = cent[1] *-1
-        # cent2[2] = cent[2] *-1
-        # transMat = [mat[0][0], mat[1][0], mat[2][0],0,
-        #             mat[0][1], mat[1][1], mat[2][1], 0,
-        #             mat[0][2], mat[1][2], mat[2][2], 0,
-        #             0,0,0,1]
-        #             #cent[0], cent[1], cent[2], 1]
-        #
-        # logicTrans = slicer.vtkSlicerTransformLogic()
-        # transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode")
-        # eModel.SetAndObserveTransformNodeID(transformNode1.GetID())
-        # transform = vtk.vtkTransform()
-        # transform.SetMatrix(transMat)
-        # #transform.Translate(cent2)
-        # transformNode1.SetMatrixTransformToParent(transform.GetMatrix())
-        #
-        # logicTrans.hardenTransform(transformNode1)
-        #
-        # transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode")
-        # eModel.SetAndObserveTransformNodeID(transformNode1.GetID())
-        # transform = vtk.vtkTransform()
-        # transform.Translate(cent)
-        # transformNode1.SetMatrixTransformToParent(transform.GetMatrix())
-        #
-        # logicTrans.hardenTransform(transformNode1)
-
-
-#############################################################
-
         # Check which breast volume is being computed for
         if LeftBreast == True:
           name = "ClosedLeftBreast"
@@ -474,11 +276,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         reconstructedPlane.SetInputConnection(cfPlane.GetOutputPort())
         reconstructedPlane.ReverseCellsOn()
         reconstructedPlane.ReverseNormalsOn()
-
-
-        # create a loop defined by the input points
-        #PointsPolyData = vtk.vtkPolyData()
-        #self.FiducialsToPolyData(fidList, PointsPolyData)
 
         PointsPolyData = vtk.vtkPolyData()
         #self.errorSim(fidList, PointsPolyData)
@@ -557,14 +354,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         connectedInput.SetInputConnection(clippedInputWithLoop.GetOutputPort())
         connectedInput.SetExtractionModeToLargestRegion()
         connectedInput.Update()
-
-
-        # clippedInputWithExtrude = vtk.vtkClipPolyData()
-        # clippedInputWithExtrude.SetClipFunction(implictSpline)  # should be loop
-        # clippedInputWithExtrude.SetInputData(connectedInput.GetOutput())
-        # clippedInputWithExtrude.SetInsideOut(True)
-        # clippedInputWithExtrude.Update()
-
 
         # close the clippedInputWith loop by using the linearExtrusion filter
         extrudeInputWithLoop = vtk.vtkLinearExtrusionFilter()
@@ -683,13 +472,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
         modelsLogic = slicer.modules.models.logic()
 
-        # create a loop defined by the input points
-       # PointsPolyData = vtk.vtkPolyData()
-        #self.FiducialsToPolyData(fidList, PointsPolyData)
-
-        # modelPoints = vtk.vtkPolyData()
-        # self.FiducialsToPolyData(modelFids, modelPoints)
-
         # #****************************************************************************
         # spline model to model back of the chest wall
         spline = vtk.vtkParametricSpline()
@@ -757,7 +539,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
 
         clippedInputWithLoop.SetInsideOut(True)
         clippedInputWithLoop.Update()
-
 
 
         # No use the vtkPolyDataConnectivityFilter to extract the largest region
@@ -839,8 +620,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         cleanClosedBreast.SetInputData(appendClosedBreast.GetOutput())
         cleanClosedBreast.Update()
 
-        # output.SetPolyDataConnection(appendClosedBreast.GetOutputPort())
-        # output.GetModelDisplayNode().VisibilityOn()
 
         finalModel = modelsLogic.AddModel(cleanClosedBreast.GetOutput())
         finalModel.GetDisplayNode().SetVisibility(True)
@@ -881,51 +660,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
             print("surface is closed")
 
         return finalModel
-
-    ############################################################
-    #All should be removed only to get image with cropped out breast and curved surface
-        # CenterOfMass = vtk.vtkCenterOfMass()
-        # CenterOfMass.SetInputData(PointsPolyData)
-        # CenterOfMass.SetUseScalarsAsWeights(False)
-        # CenterOfMass.Update()
-        # center = CenterOfMass.GetCenter()
-        #
-        #
-        # sphere1 = vtk.vtkSphere()
-        # sphere1.SetCenter(center)
-        # sphere1.SetRadius(87)
-        #
-        # sphere2 = vtk.vtkSphere()
-        # sphere2.SetCenter(center)
-        # sphere2.SetRadius(83)
-        #
-        # clippedInputWithLoop2 = vtk.vtkClipPolyData()
-        # clippedInputWithLoop2.SetClipFunction(sphere2)  # should be loop
-        # clippedInputWithLoop2.SetInputData(InputModel)
-        # clippedInputWithLoop2.SetInsideOut(False)
-        # clippedInputWithLoop2.Update()
-        #
-        # clippedInputWithLoop3 = vtk.vtkClipPolyData()
-        # clippedInputWithLoop3.SetClipFunction(sphere1)  # should be loop
-        # clippedInputWithLoop3.SetInputData(TransformedPlane.GetOutput())
-        ######Change here as well################################
-        # clippedInputWithLoop3.SetInsideOut(True)
-        # clippedInputWithLoop3.Update()
-        #
-        # appendClosedBreast2 = vtk.vtkAppendPolyData()
-        # appendClosedBreast2.AddInputData(clippedInputWithLoop2.GetOutput())  # need to change these variables
-        # appendClosedBreast2.AddInputData(clippedInputWithLoop3.GetOutput())
-        # appendClosedBreast2.Update()
-        #
-        # finalModel = modelsLogic.AddModel(clippedInputWithLoop2.GetOutput())
-        # finalModel.GetDisplayNode().SetVisibility(True)
-        # finalModel.SetName("surface")
-        # finalModel.GetDisplayNode().BackfaceCullingOff()
-        #
-        # finalModel = modelsLogic.AddModel(clippedInputWithLoop3.GetOutput())
-        # finalModel.GetDisplayNode().SetVisibility(True)
-        # finalModel.SetName("surface2")
-        # finalModel.GetDisplayNode().BackfaceCullingOff()
 
     def errorSim(self, fidList, polyData):
         PointsPolyData = vtk.vtkPolyData()
@@ -1015,8 +749,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         volume = round(stat.GetVoxelCount() * cubicMMPerVoxel * ccPerCubicMM,2)
         volumeLabel.setText(volume)
         return volume
-
-
 
 
     def run(self, inputModel, fidList, LeftBreast, volume, surfaceArea,  planeType, modelFids):
