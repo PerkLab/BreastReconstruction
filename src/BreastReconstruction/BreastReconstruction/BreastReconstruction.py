@@ -649,8 +649,8 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         modelsLogic = slicer.modules.models.logic()
 
         PointsPolyData = vtk.vtkPolyData()
-        #self.errorSim(fidList, PointsPolyData)
-        self.FiducialsToPolyData(fidList, PointsPolyData)
+        self.errorSim(fidList, PointsPolyData)
+        #self.FiducialsToPolyData(fidList, PointsPolyData)
 
         # Clip the input model with the plane defined by input points
         plane = vtk.vtkPlane()
@@ -908,7 +908,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         # clippedInputWithLoop3 = vtk.vtkClipPolyData()
         # clippedInputWithLoop3.SetClipFunction(sphere1)  # should be loop
         # clippedInputWithLoop3.SetInputData(TransformedPlane.GetOutput())
-        # #####Change here as well################################
+        ######Change here as well################################
         # clippedInputWithLoop3.SetInsideOut(True)
         # clippedInputWithLoop3.Update()
         #
@@ -934,9 +934,9 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         points = vtk.vtkPoints()
         for i in range(NumberOfPoints):
             p = PointsPolyData.GetPoint(i)
-            ran1 = uniform(0,2) -1
-            ran2 = uniform(0,2) -1
-            ran3 = uniform(0,2) -1
+            ran1 = uniform(0,10) -5
+            ran2 = uniform(0,10) -5
+            ran3 = uniform(0,10) -5
             p1 = p[0] + ran1
             p2 = p[1] + ran2
             p3 = p[2] + ran3
