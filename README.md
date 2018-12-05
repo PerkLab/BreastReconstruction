@@ -29,18 +29,23 @@ A 3D Slicer module to measure the breast volume difference given a 3D surface sc
         3. Repeat for left and right breast
         
         *When creating the breast boundary it is important that is remains constant for each patient, the boundary should be marked once and the fiduicals saved for other measurements. The breast boundary should resemble the breast footprint, this is done by having the breast reconstruction surgeon mark the footprint on the patient before the initial scan.*
-3. Select the surface scan as the input model
-4. Click the *Apply* Button
+4. Select the surface scan as the input model
+5. Click the *Apply* Button
+
 *The module should now display the left breast volume, right breast volume and the breast volume difference. The module will also create two new models one called ClosedRightBreast and the other ClosedleftBreast*
-5. Verify the module has performed correctly
+
+6. Verify the module has performed correctly
     1. Open the *Models* module
-    2. Inspect the ClosedRightBreast and ClosedLeftBreast, they should represent the breasts clipped from the model with a curved posterior wall. Below are an images of the module performing correctly with the sample mannequin scan. ![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsFront.PNG "Front View")![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsSide.PNG "Side View")
+    2. Inspect the ClosedRightBreast and ClosedLeftBreast, they should represent the breasts clipped from the model with a curved posterior wall. Below are an images of the module performing correctly with the sample mannequin scan. 
+    
+    ![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsFront.PNG "Front View")![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsSide.PNG "Side View")
     3. If the module does not produce the correct results please follow the instructions [here](#error)
 
 ## Error Handling <a name="error"></a>
 If the works flow above produce incorrect results, for example the breast is not cropped correctly. 
-    1. Try checking the *Error Type 1* check box, then prodceed to step 4 of the workflow
-    2. Try checking the *Error Type 2* check box, then prodceed to step 4 of the workflow
+
+1.Try checking the *Error Type 1* check box, then prodceed to step 4 of the workflow
+2. Try checking the *Error Type 2* check box, then prodceed to step 4 of the workflow
 
 ## 3D Surface Scans 
 The 3D surface scans for this project were captured using the [Artec Eva](https://www.artec3d.com/). The surface scans are processed using the Artec Studio software. The scans are saved as .obj files and the scans textures are saved as .jpeg files. 
