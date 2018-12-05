@@ -31,7 +31,10 @@ The module can be used to measure the breast volume difference between the right
 *The module should now display the left breast volume, right breast volume and the breast volume difference. The module will also create to new models one called ClosedRightBreast and the other ClosedleftBreast*
 5. Verify the module has performed correctly
     1. Open the Models module
-    2. Inspect the ClosedRightBreast and ClosedLeftBreast, they should represent the breasts clipped from the model with a curved posterior wall. Below is an image of the module performing correctly with the sample mannequin scan. ![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsFront.PNG "Front View")![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsSide.PNG "Side View")
+    2. Inspect the ClosedRightBreast and ClosedLeftBreast, they should represent the breasts clipped from the model with a curved posterior wall. Below are an images of the module performing correctly with the sample mannequin scan. ![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsFront.PNG "Front View")![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsSide.PNG "Side View")
+    3. If the module does not produce the correct results please follow the instructions [here](#error)
+
+## Error Handling <a name="error"></a>
 
 ## 3D Surface Scans 
 
