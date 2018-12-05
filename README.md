@@ -20,7 +20,9 @@ A 3D Slicer module to measure the breast volume difference given a 3D surface sc
   
 ## Workflow
 1. Open the *BreastRreconstruction* Module from the modules drop-down menu. Below is an screen shot of the modules user interface.
-![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/userInterface.PNG "User Interface")
+
+![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/UserInterface.PNG "User Interface")
+
 2. Import the 3D surface scan for which you would like to measure the breast volume difference (drag scan into 3D Slicer) 
 3. Either:
     1. Import predefined left and right breast fiduicals for the patient and select these as the fiducials to use from the drop-down menu
