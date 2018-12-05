@@ -23,10 +23,15 @@ The module can be used to measure the breast volume difference between the right
 1. Open the BreastRreconstruction Module from the modules drop-down menu 
 2. Import the 3D surface scan for which you would like to measure the breast volume difference (drag scan into 3D Slicer) 
 3. Either:
-    a. Import predefined left and right breast fiduicals for the patient 
-    b. Create new breast boundary fiduicals see [Creating Breast Boundary](#breastBond)
-3. 
-4. Select the 
+    1. Import predefined left and right breast fiduicals for the patient 
+    2. Create new breast boundary fiduicals see [Creating Breast Boundary](#breastBond)
+3. Select the surface scan as the input model
+4. Select the breast boundary fiducials as the left and right fiducials
+4. Click the *Apply* Button
+*The module should now display the left breast volume, right breast volume and the breast volume difference. The module will also create to new models one called ClosedRightBreast and the other ClosedleftBreast*
+5. Verify the module has performed correctly
+    1. Open the Models module
+    2. Inspect the ClosedRightBreast and ClosedLeftBreast, they should repersent the breasts clipped from the model with a curved posterior wall. Below is an image of the module performing correctly with the sample mannequin scan. [picture alt]()
 
 ## 3D Surface Scans 
 
