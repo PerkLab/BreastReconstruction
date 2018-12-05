@@ -42,16 +42,11 @@ If the works flow above produce incorrect results, for example the breast is not
     1. Try checking the *Error Type 1* check box, then prodceed to step 4 of the workflow
     2. Try checking the *Error Type 2* check box, then prodceed to step 4 of the workflow
 
-## Creating Breast Boundary <a name="breastBond"></a>
-1. Ensure the scan (.obj) and texture (.jpeg) are loaded into 3D Slicer
-2. Open the *Texture Model* module
-3. Set the scan and texture files as inputs and click *apply*
-4. Open the breast 
-
 ## 3D Surface Scans 
 The 3D surface scans for this project were captured using the [Artec Eva](https://www.artec3d.com/). The surface scans are processed using the Artec Studio software. The scans are saved as .obj files and the scans textures are saved as .jpeg files. 
 
-
+## Example Scan
+A mannequin was scanned using the Artec Eva, the scan is stored [here]()
 
 
 
