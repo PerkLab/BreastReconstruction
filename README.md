@@ -2,6 +2,7 @@
 *Tool for breast reconstruction surgery planning*
 
 A 3D Slicer module to measure the breast volume difference given a 3D surface scan and breast boundaries as input.
+The module can be used to measure the breast volume difference between the right and left breast from the same surface scan or between the same breast from multiple scans. 
 
 ## Installation
 1. Clone or download the Breast Reconstruction Module [here](https://github.com/PerkLab/BreastReconstruction)
@@ -18,10 +19,17 @@ A 3D Slicer module to measure the breast volume difference given a 3D surface sc
     
 *The module should now be installed and visible under the Modules drop-down menu under the category BreastSurgery.* 
   
-## Workflow
+## Workflow for breast volume difference between left and right breast 
+1. Open the BreastRreconstruction Module from the modules drop-down menu 
+2. Import the 3D surface scan for which you would like to measure the breast volume difference (drag scan into 3D Slicer) 
+3. Either:
+    a. Import predefined left and right breast fiduicals for the patient 
+    b. Create new breast boundary fiduicals see [Creating Breast Boundary](#breastBond)
+3. 
+4. Select the 
 
 ## 3D Surface Scans 
 
-## Creating Breast Boundary 
+## Creating Breast Boundary <a name="breastBond"></a>
 
 
