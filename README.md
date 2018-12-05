@@ -4,7 +4,7 @@
 A 3D Slicer module to measure the breast volume difference given a 3D surface scan and breast boundaries as input.
 
 ## Instalation 
-1. 
+1. Clone or download the Breast Reconstruction Module [here](https://github.com/PerkLab/BreastReconstruction)
 2. Install 3D slicer from the [download page](https://download.slicer.org/)
 3. Install the Breast Reconstruction Module: 
     - Open 3D Slicer
