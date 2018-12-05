@@ -39,12 +39,13 @@ A 3D Slicer module to measure the breast volume difference given a 3D surface sc
     2. Inspect the ClosedRightBreast and ClosedLeftBreast, they should represent the breasts clipped from the model with a curved posterior wall. Below are an images of the module performing correctly with the sample mannequin scan. 
     
     ![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsFront.PNG "Front View")![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/manequinBreastsSide.PNG "Side View")
+    
     3. If the module does not produce the correct results please follow the instructions [here](#error)
 
 ## Error Handling <a name="error"></a>
 If the works flow above produce incorrect results, for example the breast is not cropped correctly. 
 
-1.Try checking the *Error Type 1* check box, then prodceed to step 4 of the workflow
+1. Try checking the *Error Type 1* check box, then prodceed to step 4 of the workflow
 2. Try checking the *Error Type 2* check box, then prodceed to step 4 of the workflow
 
 ## 3D Surface Scans 
