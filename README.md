@@ -46,7 +46,7 @@ If the works flow above produce incorrect results, for example the breast is not
 The 3D surface scans for this project were captured using the [Artec Eva](https://www.artec3d.com/). The surface scans are processed using the Artec Studio software. The scans are saved as .obj files and the scans textures are saved as .jpeg files. 
 
 ## Example Scan
-A mannequin was scanned using the Artec Eva, the scan is stored [here]()
+A mannequin was scanned using the Artec Eva, the scan is stored [here](https://github.com/PerkLab/BreastReconstruction/tree/master/data/Example3Dscans). Also stored at this location is an example of a left and right breast fiduical set for the mannequin.
 
 
 
