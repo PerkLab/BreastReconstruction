@@ -263,6 +263,22 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         reversePlane.ReverseCellsOn()
         reversePlane.ReverseNormalsOn()
 
+        ####
+        #Added for experiment
+        loop = vtk.vtkImplicitSelectionLoop()
+        loop.SetLoop(PointsPolyData.GetPoints())
+        v1 = -1 * plane.GetNormal()[0]
+        v2 = -1 * plane.GetNormal()[1]
+        v3 = -1 * plane.GetNormal()[2]
+        loop.SetNormal(plane.GetNormal())
+
+        noBreasts = vtk.vtkClipPolyData()
+        noBreasts.SetClipFunction(loop)
+        noBreasts.SetInputData(InputModel)
+        noBreasts.SetInsideOut(False)
+        noBreasts.Update()
+
+
         # #****************************************************************************
         # spline model to model back of the chest wall
         splinePoints = vtk.vtkPoints()
@@ -270,8 +286,15 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         #these commented out lines where for if the user inputed seperate points to select points of model surface istead of just the selection loop
         # for i in range(modelPoints.GetNumberOfPoints()):
         #     splinePoints.InsertNextPoint(modelPoints.GetPoint(i))
-        for i in range(PointsPolyData.GetNumberOfPoints()):
-            splinePoints.InsertNextPoint(PointsPolyData.GetPoint(i))
+        o = plane.GetOrigin()
+        #for i in range(1,noBreasts.GetOutput().GetPoints().GetNumberOfPoints(),10): #Use to speed up 
+        for i in range(noBreasts.GetOutput().GetPoints().GetNumberOfPoints()):
+            p = noBreasts.GetOutput().GetPoints().GetPoint(i)
+            dis = vtk.vtkMath.Distance2BetweenPoints(p,o)
+            dis = math.sqrt(dis)
+            if dis < 100:
+                splinePoints.InsertNextPoint(p)
+
         #creates implicit representation of spline
         spline = vtk.vtkParametricSpline()
         spline.SetPoints(splinePoints)
@@ -299,16 +322,27 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         functionSource2 = vtk.vtkParametricFunctionSource()
         functionSource2.SetParametricFunction(spline2)
 
+
+
+
         #creates a thinspline trasnform between the original points and the projectedPoints
         splineTransform = vtk.vtkThinPlateSplineTransform()
         splineTransform.SetSourceLandmarks(projectedPoints)
-        splineTransform.SetTargetLandmarks(PointsPolyData.GetPoints())
+        splineTransform.SetTargetLandmarks(splinePoints)
         splineTransform.SetBasisToR() #Since our points are 3D
 
         #apply spline transform to the plane visualization
         planeWithSplineTransform = vtk.vtkTransformPolyDataFilter()
         planeWithSplineTransform.SetInputConnection(reversePlane.GetOutputPort())
         planeWithSplineTransform.SetTransform(splineTransform)
+
+        #This should be used to smooth the tranformed plane
+
+        # smoothedChest = vtk.vtkSmoothPolyDataFilter()
+        # smoothedChest.SetInputData(planeWithSplineTransform.GetOutput())
+        # smoothedChest.SetNumberOfIterations(10)
+        # smoothedChest.Update()
+
 
         #create model of the transformed plane
         transformedPlaneModel = modelsLogic.AddModel(planeWithSplineTransform.GetOutputPort())
@@ -333,6 +367,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         #####Change here as well################################
         clippedInputWithLoop.SetInsideOut(True)
         clippedInputWithLoop.Update()
+
 
         # No use the vtkPolyDataConnectivityFilter to extract the largest region
         connectedInput = vtk.vtkPolyDataConnectivityFilter()
@@ -416,7 +451,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         closedBreastModel.SetName(name)
         closedBreastModel.GetDisplayNode().BackfaceCullingOff()
 
-        slicer.mrmlScene.RemoveNode(transformedPlaneModel)
+        #slicer.mrmlScene.RemoveNode(transformedPlaneModel)
 
         return closedBreastModel
 
