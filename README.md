@@ -55,6 +55,8 @@ There are two options that can be used together or seperate for both breasts to 
 ![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/reverseNormal.PNG "Reverse Normal Example")
 2. Set the clip function to inside out. An example of a breast where the the clip function was set to inside out to obtain the correct results is below.  
 ![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/insideOutClip.PNG "Inside Out Clip Function Example")
+3. Reverse normal and set clip function to inside out for same breast. An example of when both were used to obtain the correct results is below.  
+![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/bothErrors.PNG " Reverse normal and Inside Out Clip Function Example")
 
 ## 3D Surface Scans 
 The 3D surface scans for this project were captured using the [Artec Eva](https://www.artec3d.com/). The surface scans are processed using the Artec Studio software. The scans are saved as .obj files and the scans textures are saved as .jpeg files. 
