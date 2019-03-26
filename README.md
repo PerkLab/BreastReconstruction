@@ -48,10 +48,13 @@ A 3D Slicer module to measure the breast volume difference given a 3D surface sc
     3. If the module does not produce the correct results please follow the instructions [here](#error)
 
 ## Error Handling <a name="error"></a>
-If the works flow above produce incorrect results, for example the breast is not cropped correctly. 
+If after inspection the closed right and/or left breast models are produced please consult below.
 
-1. Try checking the *Error Type 1* check box, then prodceed to step 4 of the workflow
-2. Try checking the *Error Type 2* check box, then prodceed to step 4 of the workflow
+There are two options that can be used together or seperate for both breasts to correct the meshes.
+1. Reverse the normal of the breast. An example of a breast where the normal was reversed to obtain the correct results is below.  
+![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/reverseNormal.PNG "Reverse Normal Example")
+2. Set the clip function to inside out. An example of a breast where the the clip function was set to inside out to obtain the correct results is below.  
+![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/insideOutClip.PNG "Inside Out Clip Function Example")
 
 ## 3D Surface Scans 
 The 3D surface scans for this project were captured using the [Artec Eva](https://www.artec3d.com/). The surface scans are processed using the Artec Studio software. The scans are saved as .obj files and the scans textures are saved as .jpeg files. 
