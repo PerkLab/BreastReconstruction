@@ -25,11 +25,13 @@ A 3D Slicer module to measure the breast volume difference given a 3D surface sc
 
 2. Import the 3D surface scan for which you would like to measure the breast volume difference (drag scan into 3D Slicer) 
 3. Either:
-    1. Import predefined left and right breast fiduicals for the patient and select these as the fiducials to use from the drop-down menu
-    2. Create new breast boundary fiduicals 
+    1. If this is the intital scan, create the new breast boundary fiduicals:
         1. Select *Create new MarkupFiducials* from the dropdown menu assosiated with the left or right fiduicals 
         2. Place fiduicals around the circumference of the breast starting from middle of the chest
         3. Repeat for left and right breast
+    2. Register to the intital scan and import fiducials 
+        1. Import intital scan and use it as input to optional 
+        2. Input left and right fiducials and put them in corresponding input
         
         *When creating the breast boundary it is important that is remains constant for each patient, the boundary should be marked once and the fiduicals saved for other measurements. The breast boundary should resemble the breast footprint, this is done by having the breast reconstruction surgeon mark the footprint on the patient before the initial scan.*
 4. Select the surface scan as the input model
