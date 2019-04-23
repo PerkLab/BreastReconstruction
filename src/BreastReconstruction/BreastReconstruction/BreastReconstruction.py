@@ -26,7 +26,7 @@ class BreastReconstruction(ScriptedLoadableModule):
     """
         self.parent.acknowledgementText = """
     This module was developed in the Perklab at Queen's University.
-""" 
+"""
 
 #
 # BreastReconstructionWidget
@@ -314,8 +314,10 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         B[:,0] = allpoints[:,2]
         #Solve least squares equation
         (a, b, c), resid, rank, s = np.linalg.lstsq(A, B,rcond=-1)
+
         #Construct Normal of Plane
         normal = (a, b, -1)
+
         #Normalized the plane normal
         nn = np.linalg.norm(normal)
         normal = normal / nn
@@ -357,28 +359,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         # Create plane of best fit from input breast boundary fiducials
         plane = vtk.vtkPlane()
         self.LeastSquaresPlane(inputModel, breastBoundPolyData, plane)
-
-        # UNCOMMENT out lines between if you would like to compute distance between only the breasts and not the
-        # the entire models
-        # creates loop from the breast boundary points
-        # breastBound = vtk.vtkImplicitSelectionLoop()
-        # breastBound.SetLoop(breastBoundPolyData.GetPoints())
-        #
-        # iM = vtk.vtkClipPolyData()
-        # iM.SetClipFunction(breastBound)
-        # iM.SetInputData(initialModel.GetPolyData())
-        # iM.SetInsideOut(False)
-        # iM.Update()
-        #
-        # M = vtk.vtkClipPolyData()
-        # M.SetClipFunction(breastBound)
-        # M.SetInputData(modelNode.GetPolyData())
-        # M.SetInsideOut(False)
-        # M.Update()
-        #
-        # sourcePolyData = iM.GetOutput()
-        # targetPolyData = M.GetOutput()
-        # STOP commenting now
 
         #Compute the mean distance after registration
         # If above is uncommented comment out the two lines following
@@ -475,26 +455,6 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         targetPoints = vtk.vtkPoints()
         for i in range(breastBoundPolyData.GetNumberOfPoints()):
             targetPoints.InsertNextPoint(breastBoundPolyData.GetPoint(i))
-
-        # UNCOMMENT after this line to add more points
-
-        # loop = vtk.vtkImplicitSelectionLoop()
-        # loop.SetLoop(breastBoundPolyData.GetPoints())
-        # torso = vtk.vtkClipPolyData()
-        # torso.SetClipFunction(loop)
-        # torso.SetInputData(modelNode.GetPolyData())
-        # torso.SetInsideOut(False)
-        # torso.Update()
-        # o = plane.GetOrigin()
-        # radius = 100
-        # for i in range(torso.GetOutput().GetPoints().GetNumberOfPoints()): #can increment by larger number (ie 10) to speed up
-        #     p = torso.GetOutput().GetPoints().GetPoint(i)
-        #     dis = vtk.vtkMath.Distance2BetweenPoints(p,o)
-        #     dis = math.sqrt(dis)
-        #     if dis < radius: #This can be changed to input more or less of the input model
-        #         targetPoints.InsertNextPoint(p)
-
-        # END of section to add more points
 
         # Create source point set for thin plate spline by getting points on plane
         sourcePoints = vtk.vtkPoints()
@@ -715,7 +675,7 @@ class BreastReconstructionLogic(ScriptedLoadableModuleLogic):
         cubicMMPerVoxel = reduce(lambda x, y: x * y, segmentLabelmap.GetSpacing())
         ccPerCubicMM = 0.001
         stats = {}
-        volume = round(stat.GetVoxelCount() * cubicMMPerVoxel * ccPerCubicMM,2)
+        volume = round(stat.GetVoxelCount() * cubicMMPerVoxel * ccPerCubicMM, 0)
         volumeLabel.setText(volume)
         slicer.mrmlScene.RemoveNode(segmentationNode)
         return volume
