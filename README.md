@@ -1,7 +1,7 @@
 # BreastReconstruction
 *Tool for breast reconstruction surgery planning*
 
-A 3D Slicer module to measure the breast volume difference given a 3D surface scan and breast boundaries as input.
+A 3D Slicer module to measure the breast volume difference given a 3D surface scan and breast boundaries markups as input.
 
 ## Installation
 1. Clone or download the Breast Reconstruction Module [here](https://github.com/PerkLab/BreastReconstruction)
@@ -21,15 +21,17 @@ A 3D Slicer module to measure the breast volume difference given a 3D surface sc
 ## Workflow
 1. Open the *BreastRreconstruction* Module from the modules drop-down menu. Below is an screen shot of the modules user interface.
 
-![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/UserInterface.PNG "User Interface")
+![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/userInterface.PNG "User Interface")
 
 2. Import the 3D surface scan for which you would like to measure the breast volume difference (drag scan into 3D Slicer) 
 3. Either:
-    1. Import predefined left and right breast fiduicals for the patient and select these as the fiducials to use from the drop-down menu
-    2. Create new breast boundary fiduicals 
+    1. If this is the intital scan, create the new breast boundary fiduicals:
         1. Select *Create new MarkupFiducials* from the dropdown menu assosiated with the left or right fiduicals 
         2. Place fiduicals around the circumference of the breast starting from middle of the chest
         3. Repeat for left and right breast
+    2. Register to the intital scan and import fiducials 
+        1. Import intital scan and use it as input to optional 
+        2. Input left and right fiducials and put them in corresponding input
         
         *When creating the breast boundary it is important that is remains constant for each patient, the boundary should be marked once and the fiduicals saved for other measurements. The breast boundary should resemble the breast footprint, this is done by having the breast reconstruction surgeon mark the footprint on the patient before the initial scan.*
 4. Select the surface scan as the input model
@@ -46,10 +48,15 @@ A 3D Slicer module to measure the breast volume difference given a 3D surface sc
     3. If the module does not produce the correct results please follow the instructions [here](#error)
 
 ## Error Handling <a name="error"></a>
-If the works flow above produce incorrect results, for example the breast is not cropped correctly. 
+If after inspection the closed right and/or left breast models are produced please consult below.
 
-1. Try checking the *Error Type 1* check box, then prodceed to step 4 of the workflow
-2. Try checking the *Error Type 2* check box, then prodceed to step 4 of the workflow
+There are two options that can be used together or seperate for both breasts to correct the meshes.
+1. Reverse the normal of the breast. An example of a breast where the normal was reversed to obtain the correct results is below.  
+![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/reverseNormal.PNG "Reverse Normal Example")
+2. Set the clip function to inside out. An example of a breast where the the clip function was set to inside out to obtain the correct results is below.  
+![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/insideOutClip.PNG "Inside Out Clip Function Example")
+3. Reverse normal and set clip function to inside out for same breast. An example of when both were used to obtain the correct results is below.  
+![](https://github.com/PerkLab/BreastReconstruction/blob/master/data/ExampleScreenshots/bothErrors.PNG " Reverse normal and Inside Out Clip Function Example")
 
 ## 3D Surface Scans 
 The 3D surface scans for this project were captured using the [Artec Eva](https://www.artec3d.com/). The surface scans are processed using the Artec Studio software. The scans are saved as .obj files and the scans textures are saved as .jpeg files. 
