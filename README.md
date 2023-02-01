@@ -1,7 +1,7 @@
 # BreastReconstruction
 *Tool for breast reconstruction surgery planning*
 
-A 3D Slicer module to measure the breast volume difference given a 3D surface scan and breast boundaries markups as input.
+A 3D Slicer module to measure the breast volume difference given a 3D surface scan and breast boundaries markups as input. More information about the method is available [here](https://qspace.library.queensu.ca/bitstream/handle/1974/26146/House_Rachael_M_201904_MSc.pdf).
 
 ## Installation
 1. Clone or download the Breast Reconstruction Module [here](https://github.com/PerkLab/BreastReconstruction)
